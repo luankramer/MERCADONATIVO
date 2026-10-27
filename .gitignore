@@ -1,0 +1,34 @@
+# ===== Mercado Nativo — arquivos que NÃO vão para o Git =====
+
+# Segredos (senhas, chaves do Mercado Pago, WhatsApp)
+.env
+.env.local
+*.local
+
+# Python / backend
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+backend/uploads/
+
+# Node / front-end
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+*.timestamp-*-*.mjs
+
+# Backups locais (zips com o .env dentro — nunca publicar)
+_backups/
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

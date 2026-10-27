@@ -1,0 +1,24 @@
+MERCADO NATIVO - IDENTIDADE VISUAL
+
+Símbolo: folha trançada (metade folha da mata, metade palha trançada = produtor + artesanato).
+Vetorizado a partir da proposta gerada no Gemini.
+
+CORES
+  Verde-mata  #0B6B4A
+  Terracota   #9A4A1E
+  Creme       #FBFAF6  (fundo)
+  Carimbo     #5E2F14  (versão 1 cor)
+
+FONTE DO NOME
+  Barlow Condensed (Bold para o nome, Medium para o slogan) - gratuita (licença OFL),
+  disponível no Google Fonts e no Canva. No SVG o texto já está convertido em desenho.
+
+ARQUIVOS
+  svg/  -> use no Canva (Uploads), no site e para gráfica. Cores editáveis.
+  png/  -> fundo transparente, para quem usa Canva gratuito, Word, WhatsApp etc.
+    mercado-nativo-horizontal       versão principal (símbolo + nome)
+    mercado-nativo-vertical         símbolo em cima, nome embaixo (selo, posts quadrados)
+    mercado-nativo-simbolo          só a folha (perfil do WhatsApp, ícone)
+    mercado-nativo-simbolo-vertical folha em pé
+    mercado-nativo-carimbo-1cor     uma cor só (carimbo, etiqueta, embalagem kraft)
+    mercado-nativo-branco           para fundos escuros

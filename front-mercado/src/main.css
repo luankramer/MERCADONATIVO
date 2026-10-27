@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  /* Tamanho da letra escolhido pela pessoa (botão "Aa"): tudo no site é em rem e acompanha */
+  html.letra-grande { font-size: 112.5%; }
+  html.letra-maior { font-size: 125%; }
+  body { @apply bg-slate-50 text-slate-800 font-sans antialiased text-base; overscroll-behavior-y: none; }
+  /* Altura real da tela no celular (a barra do navegador do iPhone/Android não corta o conteúdo) */
+  .min-h-screen { min-height: 100vh; min-height: 100dvh; }
+  /* Evita o zoom automático do iPhone ao tocar num campo (precisa de fonte >= 16px) */
+  input, select, textarea { font-size: max(16px, 1.0625rem); }
+  button, a { touch-action: manipulation; }
+  /* Itens de grid/flex podem encolher: textos longos não empurram a tela para os lados no celular */
+  .grid > * { min-width: 0; }
+  img, svg, video { max-width: 100%; }
+  :focus-visible { outline: 3px solid theme('colors.terra.DEFAULT'); outline-offset: 2px; border-radius: 6px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Componentes reutilizáveis — use estas classes nas telas novas para manter o padrão visual */
+@layer components {
+  .label { @apply block text-base font-semibold text-slate-800 mb-1.5; }
+  .input {
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800
+           placeholder:text-slate-500 focus:outline-none focus:border-nativo focus:ring-4 focus:ring-nativo-light
+           transition disabled:bg-slate-50 disabled:text-slate-500;
+  }
+  .input-soft { @apply input bg-slate-50; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition min-h-[48px]
+           active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none select-none touch-manipulation;
+  }
+  .btn-primary { @apply btn bg-nativo text-white hover:bg-nativo-dark px-5 py-3 shadow-sm; }
+  .btn-outline { @apply btn border border-nativo text-nativo bg-white hover:bg-nativo-soft px-5 py-3; }
+  .btn-ghost { @apply btn border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-5 py-3; }
+  .btn-dark { @apply btn bg-slate-900 text-white hover:bg-slate-800 px-5 py-3; }
+  .btn-ai { @apply btn bg-terra-button text-terra hover:brightness-95 px-5 py-3; }
+  .card { @apply bg-white rounded-2xl border border-slate-100 shadow-sm; }
+  .badge { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold; }
+  .back-link { @apply inline-flex items-center gap-2 text-base font-semibold text-nativo hover:underline min-h-[48px]; }
+}
+
+@layer utilities {
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  /* Espaço para a barra inferior e para o "queixo" do iPhone */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .mb-nav { margin-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  @media (min-width: 768px) { .mb-nav { margin-bottom: 0; } }
+}

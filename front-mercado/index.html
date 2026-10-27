@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Mercado Nativo — produtores rurais e artesãos do Acre direto para você.">
+    <meta name="theme-color" content="#0B6B4A">
+    <meta name="format-detection" content="telephone=no">
+    <!-- Instalar como app no celular (Android e iPhone) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Mercado Nativo">
+    <link rel="apple-touch-icon" href="/icon-180.png?v=2">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=2">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <title>Mercado Nativo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>Ative o JavaScript para usar o Mercado Nativo.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+
+    <!-- VLibras: tradutor gratuito de Libras do Governo Federal (botão azul na lateral da tela).
+         Se estiver sem internet ou o serviço cair, o site continua funcionando normalmente. -->
+    <div vw class="enabled">
+      <div vw-access-button class="active"></div>
+      <div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js" async
+            onload="try { new window.VLibras.Widget('https://vlibras.gov.br/app') } catch (e) {}"></script>
+  </body>
+</html>
