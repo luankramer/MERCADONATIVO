@@ -39,7 +39,6 @@
   .btn-outline { @apply btn border border-nativo text-nativo bg-white hover:bg-nativo-soft px-5 py-3; }
   .btn-ghost { @apply btn border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-5 py-3; }
   .btn-dark { @apply btn bg-slate-900 text-white hover:bg-slate-800 px-5 py-3; }
-  .btn-ai { @apply btn bg-terra-button text-terra hover:brightness-95 px-5 py-3; }
   .card { @apply bg-white rounded-2xl border border-slate-100 shadow-sm; }
   .badge { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold; }
   .back-link { @apply inline-flex items-center gap-2 text-base font-semibold text-nativo hover:underline min-h-[48px]; }

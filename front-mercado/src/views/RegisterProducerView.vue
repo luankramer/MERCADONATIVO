@@ -10,7 +10,6 @@ import { toast } from '@/services/toast'
 import { buscarCep, mascaraCep, mascaraTelefone } from '@/utils/format'
 import Icon from '@/components/ui/Icon.vue'
 import FontSizeControl from '@/components/ui/FontSizeControl.vue'
-import DicaVoz from '@/components/ui/DicaVoz.vue'
 
 const router = useRouter()
 const form = reactive({
@@ -19,9 +18,7 @@ const form = reactive({
 const ETAPAS = ['Quem é você', 'Seu WhatsApp', 'Onde você fica', 'Sua história']
 const aceite = ref(false)
 const etapa = ref(1)
-const palavrasIA = ref('')
 const isLoading = ref(false)
-const isGenerating = ref(false)
 const buscandoCep = ref(false)
 const titulo = ref<HTMLElement | null>(null)
 
@@ -50,22 +47,6 @@ function avancar() {
   if (erro) return toast.erro(erro)
   if (etapa.value < ETAPAS.length) irPara(etapa.value + 1)
   else handleRegister()
-}
-
-async function handleAiAssist() {
-  if (!palavrasIA.value.trim()) return toast.erro('Escreva algumas palavras sobre o seu trabalho.')
-  isGenerating.value = true
-  try {
-    const data = await api<{ texto: string }>('/api/v1/ai/generate', {
-      method: 'POST', body: { prompt: palavrasIA.value, tipo: 'produtor', nome: form.business_name || null },
-    })
-    form.description = data.texto
-    toast.info('Texto sugerido. Leia e mude o que quiser.')
-  } catch (e) {
-    toast.erro(e)
-  } finally {
-    isGenerating.value = false
-  }
 }
 
 async function onCep(valor: string) {
@@ -172,19 +153,10 @@ async function handleRegister() {
           <section v-else class="space-y-5">
             <h1 ref="titulo" tabindex="-1" class="font-serif text-3xl font-bold text-slate-900 outline-none">Conte um pouco da sua história</h1>
             <p class="text-slate-600">Isto é opcional, mas ajuda muito a vender. Pode ser simples: há quanto tempo você trabalha, o que produz, como aprendeu.</p>
-            <DicaVoz />
             <div>
               <label class="label" for="rp-hist">Sua história</label>
               <textarea id="rp-hist" v-model="form.description" rows="6" class="input resize-none" placeholder="Ex.: Planto com a minha família há 20 anos, sem veneno..." />
             </div>
-            <details class="rounded-2xl border border-terra-border bg-terra-light p-4">
-              <summary class="cursor-pointer font-semibold text-terra min-h-[32px]">Não sabe o que escrever? A gente ajuda</summary>
-              <p class="text-slate-700 mt-2">Escreva algumas palavras e toque em "Sugerir texto". Depois é só ajustar do seu jeito.</p>
-              <input v-model="palavrasIA" class="input mt-3 border-terra-border" placeholder="Ex.: 20 anos, orgânico, família" @keydown.enter.prevent="handleAiAssist" />
-              <button type="button" class="btn-ai w-full mt-3" :disabled="isGenerating" @click="handleAiAssist">
-                <Icon :name="isGenerating ? 'loader' : 'pen'" class="w-5 h-5" /> {{ isGenerating ? 'Escrevendo...' : 'Sugerir texto' }}
-              </button>
-            </details>
           </section>
 
           <label v-if="etapa === ETAPAS.length" class="mt-8 flex items-start gap-3 rounded-2xl border-2 border-slate-200 p-4 cursor-pointer has-[:checked]:border-nativo has-[:checked]:bg-nativo-soft">

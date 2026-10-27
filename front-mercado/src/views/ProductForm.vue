@@ -7,7 +7,6 @@ import { toast } from '@/services/toast'
 import Icon from '@/components/ui/Icon.vue'
 import ImageBox from '@/components/ui/ImageBox.vue'
 import { CATEGORIAS, NOME_CATEGORIA } from '@/utils/categorias'
-import DicaVoz from '@/components/ui/DicaVoz.vue'
 import { reduzirImagem } from '@/utils/imagem'
 
 const route = useRoute()
@@ -22,8 +21,6 @@ const removidas = ref<number[]>([])
 const novasFotos = ref<{ arquivo: File; preview: string }[]>([])
 const fotoInputRef = ref<HTMLInputElement | null>(null)
 const cameraInputRef = ref<HTMLInputElement | null>(null)
-const palavrasChaveIA = ref('')
-const gerandoIA = ref(false)
 const salvando = ref(false)
 
 // Galeria unificada: fotos já salvas + novas
@@ -71,22 +68,6 @@ function removerFoto(item: { id: number; nova: boolean }) {
     const [f] = novasFotos.value.splice(item.id, 1)
     if (f) URL.revokeObjectURL(f.preview)
   } else removidas.value.push(item.id)
-}
-
-async function gerarHistoriaMagica() {
-  if (!palavrasChaveIA.value.trim()) return toast.erro('Digite algumas palavras sobre o produto.')
-  gerandoIA.value = true
-  try {
-    const data = await api<{ texto: string; fonte: string }>('/api/v1/ai/generate', {
-      method: 'POST', body: { prompt: palavrasChaveIA.value, tipo: 'produto', nome: produto.nome || null },
-    })
-    produto.historia = data.texto
-    toast.info('Texto sugerido. Leia e ajuste do seu jeito antes de salvar.')
-  } catch (e) {
-    toast.erro(e)
-  } finally {
-    gerandoIA.value = false
-  }
 }
 
 async function salvarProduto() {
@@ -199,13 +180,8 @@ async function salvarProduto() {
 
         <div class="rounded-2xl border border-terra-border bg-slate-50/80 p-5 flex flex-col">
           <h2 class="text-lg font-semibold text-terra flex items-center gap-2"><Icon name="pen" class="w-5 h-5" /> A história do produto</h2>
-          <p class="text-slate-700 mt-1 mb-3">Conte a origem do produto. Se preferir, digite palavras soltas e a gente sugere um texto para você ajustar.</p>
-          <DicaVoz class="mb-3" />
-          <input v-model="palavrasChaveIA" class="input border-terra-border" placeholder="Ex: colhido à mão, receita de família..." @keydown.enter.prevent="gerarHistoriaMagica" />
-          <button type="button" class="btn-ai w-full mt-3" :disabled="gerandoIA" @click="gerarHistoriaMagica">
-            <Icon :name="gerandoIA ? 'loader' : 'pen'" class="w-4 h-4" /> {{ gerandoIA ? 'Escrevendo...' : 'Sugerir texto' }}
-          </button>
-          <textarea v-model="produto.historia" rows="12" class="input mt-4 flex-1 min-h-[16rem] font-serif italic text-slate-700 border-terra-border resize-none"
+          <p class="text-slate-700 mt-1 mb-3">Conte a origem do produto: de onde vem, como é feito e o que ele tem de especial.</p>
+          <textarea v-model="produto.historia" rows="12" class="input mt-1 flex-1 min-h-[16rem] font-serif italic text-slate-700 border-terra-border resize-none"
                     placeholder="Ex.: Colhemos o cupuaçu no quintal e cozinhamos em fogo baixo, como a vó ensinou..." />
         </div>
       </div>
