@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Vendedores cadastrados: busca, link para o perfil público e exclusão (só o Super Admin). */
+/** Vendedores cadastrados: busca, perfil público, link de conexão do Mercado Pago e exclusão (só o Super Admin). */
 import { computed, onMounted, ref } from 'vue'
 import { api } from '@/services/api'
 import { session } from '@/services/auth'
@@ -10,13 +10,27 @@ import Icon from '@/components/ui/Icon.vue'
 
 interface Vendedor {
   id: number; nome: string; nome_loja: string; whatsapp: string | null; local: string; premium: boolean
-  produtos: number; na_vitrine: number; vendas: number; cadastrado_em: string | null
+  produtos: number; na_vitrine: number; vendas: number; cadastrado_em: string | null; mp_conectado: boolean
 }
 
 const lista = ref<Vendedor[]>([])
 const busca = ref('')
 const carregando = ref(true)
 const excluindo = ref<number | null>(null)
+const enviandoLink = ref<number | null>(null)
+
+/** Ajuda o produtor a conectar o Mercado Pago: o link vai só para o WhatsApp dele. */
+async function enviarLinkMp(v: Vendedor) {
+  enviandoLink.value = v.id
+  try {
+    const r = await api<{ message: string }>(`/api/v1/admin/producers/${v.id}/mercadopago/enviar-link`, { method: 'POST', auth: 'admin' })
+    toast.sucesso(r.message)
+  } catch (e) {
+    toast.erro(e)
+  } finally {
+    enviandoLink.value = null
+  }
+}
 
 const filtrados = computed(() => {
   const t = busca.value.trim().toLowerCase()
@@ -74,7 +88,7 @@ onMounted(carregar)
 
     <div class="card overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[760px]">
+        <table class="w-full text-sm min-w-[900px]">
           <thead class="bg-slate-50 text-slate-700 border-b border-slate-100">
             <tr>
               <th class="px-6 py-3 text-left font-semibold">Vendedor</th>
@@ -92,11 +106,21 @@ onMounted(carregar)
                 <p class="text-slate-600">{{ v.nome }} · {{ v.local }}</p>
                 <p v-if="v.cadastrado_em" class="text-xs text-slate-500">Desde {{ dataHora(v.cadastrado_em) }}</p>
               </td>
-              <td class="px-4 py-3 text-slate-700">{{ v.whatsapp ? telefone(v.whatsapp) : '-' }}</td>
+              <td class="px-4 py-3 text-slate-700">
+                {{ v.whatsapp ? telefone(v.whatsapp) : '-' }}
+                <p class="text-xs mt-0.5" :class="v.mp_conectado ? 'text-nativo' : 'text-slate-500'">
+                  {{ v.mp_conectado ? 'Recebe direto no Mercado Pago' : 'Mercado Pago não conectado' }}
+                </p>
+              </td>
               <td class="px-4 py-3 text-center"><strong>{{ v.produtos }}</strong> <span class="text-slate-600">({{ v.na_vitrine }} na vitrine)</span></td>
               <td class="px-4 py-3 text-center font-semibold">{{ v.vendas }}</td>
               <td class="px-6 py-3 text-right whitespace-nowrap">
                 <RouterLink :to="`/produtor/${v.id}`" target="_blank" class="text-nativo font-medium inline-flex items-center gap-1 hover:underline"><Icon name="eye" class="w-4 h-4" /> Ver perfil</RouterLink>
+                <button v-if="!v.mp_conectado && v.whatsapp" class="ml-4 text-sky-700 font-medium inline-flex items-center gap-1 hover:underline disabled:opacity-50"
+                        :disabled="enviandoLink === v.id" title="Manda para o WhatsApp do vendedor um link para conectar a conta Mercado Pago"
+                        @click="enviarLinkMp(v)">
+                  <Icon :name="enviandoLink === v.id ? 'loader' : 'link'" class="w-4 h-4" /> Enviar link Mercado Pago
+                </button>
                 <button v-if="session.adminSuper" class="ml-4 text-red-600 font-medium inline-flex items-center gap-1 hover:underline disabled:opacity-50"
                         :disabled="excluindo === v.id" @click="excluir(v)">
                   <Icon :name="excluindo === v.id ? 'loader' : 'trash'" class="w-4 h-4" /> Excluir

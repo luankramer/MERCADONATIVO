@@ -52,7 +52,7 @@ def test_cartao_de_credito_com_split(client, produtor, admin, monkeypatch):
     monkeypatch.setattr(payment_service.requests, "post", fake_post)
     pedido = client.post("/api/v1/checkout", json={"product_id": pid, "quantidade": 2, "nome": "Ana Souza",
                                                   "whatsapp": "68999990000"}).json()
-    assert pedido["public_key"] == "TEST-pk-produtor"                   # cartão tokenizado na conta do produtor
+    assert pedido["public_key"] == "TEST-pk-plataforma"                 # Split 1:1: Public Key do integrador no formulário
     r = client.post(f"/api/v1/checkout/{pedido['codigo']}/pagar", json={
         "payment_method_id": "master", "token": "tok_123", "installments": 3, "issuer_id": "24",
         "payer": {"email": "ana@teste.com", "identification": {"type": "CPF", "number": "12345678909"}},
