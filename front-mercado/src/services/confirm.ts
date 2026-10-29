@@ -8,7 +8,7 @@ import { reactive } from 'vue'
 export interface PedidoConfirmacao {
   titulo: string; texto?: string; sim?: string; nao?: string; perigo?: boolean
   /** Mostra um campo para escrever o motivo (ex.: enviado ao vendedor pelo WhatsApp) */
-  motivo?: { rotulo: string; placeholder?: string }
+  motivo?: { rotulo: string; placeholder?: string; obrigatorio?: boolean }
 }
 
 export const confirmacao = reactive<{ aberta: boolean; pedido: PedidoConfirmacao | null; texto: string; responder: (v: boolean) => void }>({

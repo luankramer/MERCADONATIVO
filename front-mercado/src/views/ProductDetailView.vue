@@ -7,6 +7,7 @@ import { prefs } from '@/services/preferences'
 import { toast } from '@/services/toast'
 import { iniciais, moeda } from '@/utils/format'
 import Icon from '@/components/ui/Icon.vue'
+import SiteRodape from '@/components/ui/SiteRodape.vue'
 import ImageBox from '@/components/ui/ImageBox.vue'
 import StarRating from '@/components/ui/StarRating.vue'
 import CheckoutModal from '@/components/catalog/CheckoutModal.vue'
@@ -238,6 +239,8 @@ onMounted(carregar)
             </button>
           </form>
         </section>
+
+        <SiteRodape :mensagem="`Olá! Tenho uma dúvida sobre o produto ${produto.nome} no Mercado Nativo.`" />
 
         <CheckoutModal :aberto="checkoutAberto" :produto="produto" @fechar="checkoutAberto = false" />
 

@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.services import payment_service
 from app.core.security import get_current_producer
 from app.db.database import get_db
 from app.models.order_model import PEDIDO_PAGO, PEDIDO_RETIRADO, Order, OrderItem
@@ -58,6 +59,11 @@ def get_dashboard_data(db: Session = Depends(get_db), produtor: Producer = Depen
             "premium": produtor.is_premium,
             "premium_ate": produtor.premium_ate.isoformat() if produtor.premium_ate else None,
             "termos_pendentes": produtor.termos_versao != settings.TERMOS_VERSAO,
+            "mercadopago": {
+                "conectado": produtor.mp_conectado,
+                "split_disponivel": payment_service.split_disponivel(),
+                "modo": payment_service.modo_pagamento(),
+            },
         },
         "produtos": produtos,
         "estatisticas": {

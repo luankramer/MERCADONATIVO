@@ -29,6 +29,16 @@ class PagamentoBrick(BaseModel):
     payer: Pagador
 
 
+class CancelamentoCliente(BaseModel):
+    """O cliente confirma que é ele com os 4 últimos números do WhatsApp usado na compra."""
+    whatsapp_final: str = Field(min_length=4, max_length=4, pattern=r"^\d{4}$")
+    motivo: Optional[str] = Field(default=None, max_length=300)
+
+
+class CancelamentoMotivo(BaseModel):
+    motivo: str = Field(min_length=3, max_length=300)
+
+
 class PagamentoSimulado(BaseModel):
     metodo: Literal["pix", "credit_card", "debit_card"]
     parcelas: int = Field(default=1, ge=1, le=12)

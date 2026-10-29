@@ -21,6 +21,7 @@ import Modal from './Modal.vue'
       </div>
       <div class="mt-6 flex flex-col gap-3">
         <button :class="['btn w-full py-3.5 text-lg text-white', confirmacao.pedido.perigo ? 'bg-red-600 hover:bg-red-700' : 'bg-nativo hover:bg-nativo-dark']"
+                :disabled="confirmacao.pedido.motivo?.obrigatorio && confirmacao.texto.trim().length < 3"
                 @click="confirmacao.responder(true)">
           {{ confirmacao.pedido.sim || 'Sim, continuar' }}
         </button>

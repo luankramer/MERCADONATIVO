@@ -7,6 +7,7 @@ import { prefs } from '@/services/preferences'
 import { toast } from '@/services/toast'
 import { iniciais, telefone } from '@/utils/format'
 import Icon from '@/components/ui/Icon.vue'
+import SiteRodape from '@/components/ui/SiteRodape.vue'
 import ProductCard from '@/components/catalog/ProductCard.vue'
 import BottomNav from '@/components/ui/BottomNav.vue'
 
@@ -102,6 +103,7 @@ onMounted(async () => {
           <ProductCard v-for="p in produtor.produtos" :key="p.id" :produto="p" :mostrar-produtor="false" />
         </div>
         <p v-else class="text-slate-600">Nenhum produto disponível no momento.</p>
+        <SiteRodape />
       </main>
     </template>
     <BottomNav variante="publico" />

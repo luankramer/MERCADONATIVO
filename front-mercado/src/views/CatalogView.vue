@@ -8,6 +8,7 @@ import { CATEGORIAS as CATEGORIAS_PRODUTO, ICONE_CATEGORIA, NOME_CATEGORIA } fro
 import { session } from '@/services/auth'
 import { toast } from '@/services/toast'
 import Icon from '@/components/ui/Icon.vue'
+import SiteRodape from '@/components/ui/SiteRodape.vue'
 import PublicHeader from '@/components/catalog/PublicHeader.vue'
 import ProductCard, { type ProdutoCard } from '@/components/catalog/ProductCard.vue'
 import FilterModal, { type FiltrosGeo } from '@/components/catalog/FilterModal.vue'
@@ -180,22 +181,7 @@ onMounted(carregar)
         </RouterLink>
       </section>
 
-      <nav aria-label="Políticas" class="mt-10 pt-6 border-t border-slate-200 flex flex-wrap gap-x-6 gap-y-2 text-base">
-        <RouterLink to="/politicas/privacidade" class="text-slate-700 underline underline-offset-4 py-1">Privacidade</RouterLink>
-        <RouterLink to="/politicas/termos" class="text-slate-700 underline underline-offset-4 py-1">Termos de Uso</RouterLink>
-        <RouterLink to="/politicas/compras" class="text-slate-700 underline underline-offset-4 py-1">Compras e cancelamentos</RouterLink>
-        <RouterLink to="/politicas/vendedores" class="text-slate-700 underline underline-offset-4 py-1">Regras para vendedores</RouterLink>
-        <RouterLink to="/politicas/cookies" class="text-slate-700 underline underline-offset-4 py-1">Cookies</RouterLink>
-      </nav>
-      <footer class="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-        <span class="flex items-center gap-1.5"><img src="/logo-simbolo.svg" alt="" class="w-5 h-auto" width="20" height="18" /> Mercado Nativo · "Onde a cultura encontra o consumo consciente."</span>
-        <RouterLink to="/ajuda" class="flex items-center gap-1.5 p-2 font-semibold text-nativo hover:underline">
-          <Icon name="help" class="w-5 h-5" /> Ajuda: como comprar e vender
-        </RouterLink>
-        <RouterLink to="/admin/login" class="flex items-center gap-1.5 p-2 hover:text-slate-800">
-          <Icon name="shield" class="w-4 h-4" /> Acesso restrito
-        </RouterLink>
-      </footer>
+      <SiteRodape />
     </main>
 
     <BottomNav variante="publico" />
