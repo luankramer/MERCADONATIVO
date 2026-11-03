@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** "Analisar Publicação": dados do produto + análise automática da IA + aprovar/rejeitar. */
+/** "Analisar Publicação": dados do produto + verificação automática por palavras-chave + aprovar/rejeitar. */
 import { computed, ref, watch } from 'vue'
 import { api } from '@/services/api'
 import { toast } from '@/services/toast'
@@ -18,7 +18,7 @@ const motivo = ref('')
 const enviando = ref(false)
 const fotoAtual = ref(0)
 
-const analise = computed(() => produto.value?.analise_ia)
+const analise = computed(() => produto.value?.analise_curadoria)
 const corAnalise = computed(() => {
   const s = analise.value?.score ?? 0
   if (analise.value?.negativas?.length || s < 40) return 'border-red-200 bg-red-50 text-red-800'

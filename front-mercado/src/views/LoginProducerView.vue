@@ -16,6 +16,10 @@ const code = ref('')
 const step = ref(1)
 const isLoading = ref(false)
 const avisoTerminal = ref(false)
+// Cada pedido de código tem um "desafio": só este navegador consegue usar o código que chegou
+const desafio = ref('')
+const canal = ref<'whatsapp' | 'email' | 'terminal'>('whatsapp')
+const mensagemEnvio = ref('')
 // Se já existir uma sessão válida, oferece ir ao painel (sem pular a tela de login)
 const jaConectado = ref(session.isProducer)
 
@@ -24,15 +28,20 @@ function entrarComOutroNumero() {
   jaConectado.value = false
 }
 
-async function handleRequestCode() {
+async function handleRequestCode(porEmail = false) {
   isLoading.value = true
   try {
-    const r = await api<{ enviado: boolean }>('/api/v1/auth/producer/request-code', {
-      method: 'POST', body: { whatsapp: whatsapp.value },
-    })
+    const r = await api<{ enviado: boolean; desafio: string; canal: 'whatsapp' | 'email' | 'terminal'; message: string }>(
+      '/api/v1/auth/producer/request-code',
+      { method: 'POST', body: { whatsapp: whatsapp.value, canal: porEmail ? 'email' : 'whatsapp' } },
+    )
+    desafio.value = r.desafio
+    canal.value = r.canal
+    mensagemEnvio.value = r.message
     avisoTerminal.value = !r.enviado
+    code.value = ''
     step.value = 2
-    if (r.enviado) toast.sucesso('Enviamos o código para o seu WhatsApp.')
+    if (r.enviado) toast.sucesso(r.message)
   } catch (e) {
     toast.erro(e)
   } finally {
@@ -44,7 +53,7 @@ async function handleVerifyCode() {
   isLoading.value = true
   try {
     const data = await api<{ access_token: string }>('/api/v1/auth/producer/verify-code', {
-      method: 'POST', body: { whatsapp: whatsapp.value, code: code.value },
+      method: 'POST', body: { whatsapp: whatsapp.value, code: code.value, desafio: desafio.value },
     })
     session.loginProducer(data.access_token)
     router.push((route.query.voltar as string) || '/painel')
@@ -80,7 +89,7 @@ async function handleVerifyCode() {
         <button class="btn-ghost w-full" @click="entrarComOutroNumero">Entrar com outro número</button>
       </div>
 
-      <form v-else-if="step === 1" class="space-y-5" @submit.prevent="handleRequestCode">
+      <form v-else-if="step === 1" class="space-y-5" @submit.prevent="handleRequestCode()">
         <div>
           <label class="label">Número do WhatsApp</label>
           <div class="relative">
@@ -96,7 +105,10 @@ async function handleVerifyCode() {
       </form>
 
       <form v-else class="space-y-5" @submit.prevent="handleVerifyCode">
-        <div class="rounded-xl bg-nativo-soft border border-nativo-light p-4 text-center text-sm text-nativo">
+        <div v-if="canal === 'email'" class="rounded-xl bg-nativo-soft border border-nativo-light p-4 text-center text-sm text-nativo">
+          {{ mensagemEnvio }}
+        </div>
+        <div v-else class="rounded-xl bg-nativo-soft border border-nativo-light p-4 text-center text-sm text-nativo">
           Enviamos um código de 6 dígitos para<br /><strong class="tracking-wide">{{ whatsapp }}</strong>
         </div>
         <div v-if="avisoTerminal" class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center text-sm text-amber-800">
@@ -110,7 +122,11 @@ async function handleVerifyCode() {
         <button type="submit" :disabled="isLoading || code.length < 6" class="btn-primary w-full py-4">
           <Icon v-if="isLoading" name="loader" class="w-5 h-5" /> {{ isLoading ? 'Verificando...' : 'Acessar Conta' }}
         </button>
-        <button type="button" class="w-full text-sm text-nativo hover:underline" :disabled="isLoading" @click="handleRequestCode">Reenviar código</button>
+        <button type="button" class="w-full text-sm text-nativo hover:underline" :disabled="isLoading" @click="handleRequestCode()">Reenviar código</button>
+        <button v-if="canal !== 'email'" type="button" class="w-full text-sm text-slate-600 hover:underline" :disabled="isLoading"
+                @click="handleRequestCode(true)">
+          O código não chegou? Receber no meu e-mail cadastrado
+        </button>
       </form>
 
       <div class="mt-8 text-center border-t border-slate-100 pt-6">

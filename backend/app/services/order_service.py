@@ -1,28 +1,27 @@
 """Regras executadas quando um pagamento muda de status."""
-import asyncio
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.order_model import (
-    METODOS, PEDIDO_AGUARDANDO, PEDIDO_CANCELADO, PEDIDO_PAGO, Order, PremiumSubscription,
+    METODOS, PEDIDO_AGUARDANDO, PEDIDO_CANCELADO, PEDIDO_PAGO, PEDIDO_RETIRADO, Order, PremiumSubscription,
 )
 from app.models.product_model import Product
+from app.services import notificacao_service
 from app.services.payment_service import ResultadoPagamento
-from app.services.whatsapp_service import enviar_mensagem_openwa
+from app.services.whatsapp_service import texto_seguro
+
+log = logging.getLogger("mercado_nativo")
 
 
 def _notificar(numero: str | None, texto: str) -> None:
-    if not numero:
-        return
+    """Envia o aviso; se o WhatsApp estiver fora do ar, ele fica na fila e é reenviado depois."""
     try:
-        asyncio.get_running_loop().create_task(enviar_mensagem_openwa(numero, texto))
-    except RuntimeError:
-        try:
-            asyncio.run(enviar_mensagem_openwa(numero, texto))
-        except Exception:
-            pass
+        notificacao_service.notificar(numero, texto)
+    except Exception as e:
+        log.warning("Aviso por WhatsApp não enviado: %s", type(e).__name__)
 
 
 def registrar_resultado(alvo: Order | PremiumSubscription, r: ResultadoPagamento) -> None:
@@ -56,11 +55,15 @@ def confirmar_pedido(db: Session, order: Order) -> Order:
     itens = ", ".join(f"{i.quantidade}x {i.nome_produto}" for i in order.itens)
     metodo = METODOS.get(order.metodo or "", "PIX")
     repasse = f"{order.valor_produtor:.2f}".replace(".", ",")
+    # O nome foi digitado pelo comprador: sai sem links nem formatação no número oficial
+    cliente = texto_seguro(order.consumidor_nome, 60)
+    complemento = ("\nPago pelo Pix de reserva: a equipe faz o seu repasse manualmente."
+                   if order.gateway == "manual" else "")
     _notificar(
         order.producer.whatsapp if order.producer else None,
         f"🍃 *Mercado Nativo*\n\nNovo pedido pago ({metodo})!\n{itens}\n"
-        f"Cliente: {order.consumidor_nome} ({order.consumidor_whatsapp})\n"
-        f"Seu repasse: R$ {repasse}\n\nCombine a retirada com o cliente.",
+        f"Cliente: {cliente} ({order.consumidor_whatsapp})\n"
+        f"Seu repasse: R$ {repasse}{complemento}\n\nCombine a retirada com o cliente.",
     )
     # Resumo para o comprador: assim ele não precisa guardar o link do pedido
     total = f"{order.valor_total:.2f}".replace(".", ",")
@@ -68,7 +71,7 @@ def confirmar_pedido(db: Session, order: Order) -> Order:
     local = f"{produtor.business_name} ({produtor.city or ''}{'/' + produtor.uf if produtor.uf else ''})" if produtor else ""
     _notificar(
         order.consumidor_whatsapp,
-        f"🍃 *Mercado Nativo*\n\nOlá, {order.consumidor_nome.split(' ')[0]}! Recebemos o seu pagamento.\n"
+        f"🍃 *Mercado Nativo*\n\nOlá, {cliente.split(' ')[0]}! Recebemos o seu pagamento.\n"
         f"Pedido nº {order.id}: {itens}\nValor: R$ {total} ({metodo})\n"
         f"Retirada com: {local}\n\n"
         f"Ver o pedido e falar com o produtor: {settings.FRONTEND_URL}/pedido/{order.codigo}",
@@ -98,15 +101,45 @@ def confirmar_assinatura(db: Session, assinatura: PremiumSubscription) -> Premiu
     return assinatura
 
 
+def revogar_assinatura(db: Session, assinatura: PremiumSubscription) -> None:
+    """Mensalidade estornada ou contestada (chargeback): tira os dias que ela tinha dado."""
+    if assinatura.status != PEDIDO_PAGO:
+        return
+    assinatura.status = PEDIDO_CANCELADO
+    produtor = assinatura.producer
+    if produtor and produtor.premium_ate:
+        produtor.premium_ate = produtor.premium_ate - timedelta(days=settings.PREMIUM_DAYS)
+        if produtor.premium_ate <= datetime.utcnow():
+            produtor.premium = False
+            produtor.premium_ate = None
+            for p in produtor.products:  # sem Premium, sem destaque
+                p.destaque = False
+    db.commit()
+    log.warning("Premium revogado: mensalidade %s foi estornada/contestada.", assinatura.id)
+
+
 def aplicar_status(db: Session, alvo: Order | PremiumSubscription, r: ResultadoPagamento) -> None:
     """Atualiza o pedido/assinatura conforme o status retornado pelo Mercado Pago."""
+    cancelado_antes = alvo.status == PEDIDO_CANCELADO
     registrar_resultado(alvo, r)
     db.commit()
     if r.status == "approved":
-        if isinstance(alvo, Order):
+        if isinstance(alvo, Order) and cancelado_antes:
+            # Pix pago depois que o pedido já tinha sido cancelado: o dinheiro não pode ficar retido
+            from app.services.cancelamento_service import devolver_pagamento_tardio
+            devolver_pagamento_tardio(db, alvo)
+        elif isinstance(alvo, Order):
             confirmar_pedido(db, alvo)
         else:
             confirmar_assinatura(db, alvo)
     elif r.status in ("cancelled", "refunded", "charged_back") and alvo.status == PEDIDO_AGUARDANDO:
         alvo.status = PEDIDO_CANCELADO
         db.commit()
+    elif (r.status in ("refunded", "charged_back") and isinstance(alvo, Order)
+          and alvo.status in (PEDIDO_PAGO, PEDIDO_RETIRADO)):
+        # Devolução feita fora do site (ex.: produtor devolveu pelo app do Mercado Pago):
+        # o pedido acompanha, o estoque volta e todos são avisados.
+        from app.services.cancelamento_service import cancelar
+        cancelar(db, alvo, "mercadopago", "Valor devolvido pelo Mercado Pago", ja_devolvido_no_mp=True)
+    elif r.status in ("refunded", "charged_back") and isinstance(alvo, PremiumSubscription):
+        revogar_assinatura(db, alvo)

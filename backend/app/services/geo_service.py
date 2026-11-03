@@ -2,12 +2,23 @@
 Geolocalização: coordenadas das cidades e cálculo de distância (fórmula de Haversine).
 
 As 22 cidades do Acre e as capitais vizinhas estão embutidas, então a busca por raio
-funciona offline. Para outras cidades tentamos o Nominatim (OpenStreetMap).
+funciona offline. Para outras cidades tentamos o Nominatim (OpenStreetMap) — só no cadastro
+e na edição do perfil (rotas com limite), nunca na busca pública, e com memória (cache), para
+não estourar o limite de uso do Nominatim (1 consulta por segundo) e ter o servidor bloqueado.
 """
 import math
+import threading
+import time
 import unicodedata
 
 import requests
+
+_cache: dict[tuple[str, str], tuple[float, tuple[float, float] | None]] = {}
+_cache_lock = threading.Lock()
+CACHE_SEGUNDOS = 7 * 86400       # resultado encontrado: 7 dias
+CACHE_NEGATIVO_SEGUNDOS = 86400  # cidade não encontrada: 1 dia
+CACHE_MAXIMO = 2000
+_ultima_consulta = [0.0]
 
 CIDADES = {
     # Acre (todos os municípios)
@@ -67,20 +78,34 @@ def coordenadas(cidade: str | None, uf: str | None = "AC", online: bool = True) 
             return coords
     if not online:
         return None
+    chave = (alvo[:80], (uf or "").upper()[:2])
+    agora = time.monotonic()
+    with _cache_lock:
+        guardado = _cache.get(chave)
+        if guardado and guardado[0] > agora:
+            return guardado[1]
+        if agora - _ultima_consulta[0] < 1.0:
+            return None  # respeita 1 consulta/segundo do Nominatim
+        _ultima_consulta[0] = agora
     # Fora da tabela: tenta o Nominatim (precisa de internet); falha silenciosamente
+    resultado = None
     try:
         resp = requests.get(
             "https://nominatim.openstreetmap.org/search",
-            params={"city": cidade, "state": uf or "", "country": "Brasil", "format": "json", "limit": 1},
+            params={"city": cidade[:80], "state": uf or "", "country": "Brasil", "format": "json", "limit": 1},
             headers={"User-Agent": "MercadoNativo-TCC/1.0"},
             timeout=5,
         )
         dados = resp.json()
         if dados:
-            return float(dados[0]["lat"]), float(dados[0]["lon"])
+            resultado = float(dados[0]["lat"]), float(dados[0]["lon"])
     except Exception:
-        pass
-    return None
+        return None  # erro de rede: não guarda, tenta de novo numa próxima vez
+    with _cache_lock:
+        if len(_cache) >= CACHE_MAXIMO:
+            _cache.clear()
+        _cache[chave] = (agora + (CACHE_SEGUNDOS if resultado else CACHE_NEGATIVO_SEGUNDOS), resultado)
+    return resultado
 
 
 def distancia_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

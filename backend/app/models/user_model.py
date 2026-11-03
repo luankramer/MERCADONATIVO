@@ -44,9 +44,12 @@ class Producer(Base):
     mp_refresh_token_enc = Column(Text, nullable=True)
     mp_token_expira = Column(DateTime, nullable=True)
     mp_conectado_em = Column(DateTime, nullable=True)
+    mp_link_jti = Column(String(40), nullable=True)  # link de conexão enviado por WhatsApp (uso único)
 
     seguidores = Column(Integer, default=0, server_default="0")
     ativo = Column(Boolean, default=True, server_default="1")
+    # Muda quando o WhatsApp de login é trocado: todas as sessões antigas deixam de valer
+    token_versao = Column(Integer, default=0, server_default="0")
 
     # --- LGPD: aceite dos Termos/Política de Privacidade e exclusão da conta ---
     termos_aceitos_em = Column(DateTime, nullable=True)

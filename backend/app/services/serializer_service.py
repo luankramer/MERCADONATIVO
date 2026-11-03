@@ -105,7 +105,7 @@ def product_owner(p: Product) -> dict:
 def product_admin(p: Product) -> dict:
     dados = product_owner(p)
     dados.update({
-        "analise_ia": p.analise,
+        "analise_curadoria": p.analise,
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "destaque_marcado": bool(p.destaque),
     })

@@ -9,7 +9,7 @@ from app.core.security import get_current_producer
 from app.db.database import get_db
 from app.models.product_model import CATEGORIAS, STATUS_PENDENTE, Product, ProductImage
 from app.models.user_model import Producer
-from app.services.ai_service import analisar_produto
+from app.services.curadoria_service import analisar_produto
 from app.services.remocao_service import remover_produto
 from app.services.serializer_service import product_owner
 from app.services.storage_service import remover_arquivo, salvar_imagem
@@ -45,10 +45,10 @@ def _validar(nome: str, preco: float, estoque: int, categoria: str,
 
 
 def _reanalisar(product: Product) -> None:
-    """Envia para a curadoria com a análise automática da IA."""
+    """Envia para a curadoria com a verificação automática por palavras-chave."""
     product.status = STATUS_PENDENTE
     product.motivo_rejeicao = None
-    product.analise_ia = json.dumps(
+    product.analise_curadoria = json.dumps(
         analisar_produto(product.nome, product.descricao_tecnica, product.historia,
                          product.categoria, bool(product.imagens)),
         ensure_ascii=False,

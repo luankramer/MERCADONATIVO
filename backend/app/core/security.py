@@ -51,14 +51,15 @@ def _assinar(mensagem: str) -> str:
     return _b64(hmac.new(settings.SECRET_KEY.encode(), mensagem.encode(), hashlib.sha256).digest())
 
 
-def create_access_token(subject: int, role: str, validade: timedelta | None = None) -> str:
+def create_access_token(subject: int, role: str, validade: timedelta | None = None,
+                        extra: dict | None = None) -> str:
     if validade is None:
         horas = settings.ADMIN_TOKEN_HOURS if role == "admin" else settings.PRODUCER_TOKEN_HOURS
         validade = timedelta(hours=horas)
     exp = datetime.now(timezone.utc) + validade
     cabecalho = _b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
-    corpo = _b64(json.dumps({"sub": str(subject), "role": role, "exp": int(exp.timestamp())},
-                            separators=(",", ":")).encode())
+    dados = {**(extra or {}), "sub": str(subject), "role": role, "exp": int(exp.timestamp())}
+    corpo = _b64(json.dumps(dados, separators=(",", ":")).encode())
     return f"{cabecalho}.{corpo}.{_assinar(f'{cabecalho}.{corpo}')}"
 
 
@@ -67,7 +68,8 @@ def decode_token(token: str) -> dict:
         cabecalho, corpo, assinatura = token.split(".")
     except ValueError:
         raise TokenInvalido("formato")
-    if not hmac.compare_digest(assinatura, _assinar(f"{cabecalho}.{corpo}")):
+    # Compara bytes: um caractere estranho na assinatura vira "token inválido" (401), não erro 500
+    if not hmac.compare_digest(assinatura.encode("utf-8", "replace"), _assinar(f"{cabecalho}.{corpo}").encode()):
         raise TokenInvalido("assinatura")
     try:
         payload = json.loads(_b64_decode(corpo))
@@ -78,7 +80,7 @@ def decode_token(token: str) -> dict:
     return payload
 
 
-def _decode(credentials: HTTPAuthorizationCredentials | None, role: str) -> int:
+def _payload(credentials: HTTPAuthorizationCredentials | None, role: str) -> dict:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Faça login para continuar.")
     try:
@@ -88,7 +90,16 @@ def _decode(credentials: HTTPAuthorizationCredentials | None, role: str) -> int:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, msg)
     if payload.get("role") != role:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Acesso não permitido para este perfil.")
-    return int(payload["sub"])
+    return payload
+
+
+def _decode(credentials: HTTPAuthorizationCredentials | None, role: str) -> int:
+    return int(_payload(credentials, role)["sub"])
+
+
+def token_produtor(produtor) -> str:
+    """Token de login do produtor, preso à versão atual da conta (ver Producer.token_versao)."""
+    return create_access_token(produtor.id, "producer", extra={"tv": int(produtor.token_versao or 0)})
 
 
 # ---------------- Dependências das rotas ----------------
@@ -98,10 +109,13 @@ def get_current_producer(
 ):
     from app.models.user_model import Producer
 
-    producer_id = _decode(credentials, "producer")
-    producer = db.get(Producer, producer_id)
+    payload = _payload(credentials, "producer")
+    producer = db.get(Producer, int(payload["sub"]))
     if not producer or producer.ativo is False:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Produtor não encontrado ou inativo.")
+    # Depois de trocar o WhatsApp de login, as sessões abertas antes da troca deixam de valer
+    if int(payload.get("tv", 0)) != int(producer.token_versao or 0):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sessão encerrada. Entre novamente.")
     return producer
 
 

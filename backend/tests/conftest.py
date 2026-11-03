@@ -11,9 +11,12 @@ os.environ["SECRET_KEY"] = "chave-de-teste-com-mais-de-32-caracteres-123"
 os.environ["OTP_DEV_MODE"] = "true"
 os.environ["EVOLUTION_BASE_URL"] = ""
 os.environ["EVOLUTION_TOKEN"] = ""
-os.environ["OLLAMA_URL"] = "http://127.0.0.1:9"   # porta fechada: força o fallback
-os.environ["GROQ_API_KEY"] = ""
 os.environ["ADMIN_MASTER_EMAIL"] = "mestre@teste.com"
+os.environ["TAREFAS_AUTOMATICAS"] = "false"   # nos testes, as tarefas são chamadas na mão
+os.environ["MP_TENTATIVAS"] = "0"            # sem esperas entre tentativas nos testes
+os.environ["META_WA_TOKEN"] = ""
+os.environ["SMTP_HOST"] = ""
+os.environ["PIX_RESERVA_CHAVE"] = ""
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402
@@ -39,19 +42,28 @@ def client():
 
 @pytest.fixture(autouse=True)
 def _sem_limites():
+    from app.api.v1.auth import otp_storage
     from app.core.rate_limit import resetar_tudo
+    from app.services.payment_service import resetar_circuito
     resetar_tudo()
+    resetar_circuito()
+    otp_storage.clear()
     yield
 
 
-def _login_produtor(client, whatsapp):
+def _pedir_codigo(client, whatsapp):
+    """Pede o código e devolve (desafio, código). O código só existe no servidor (nunca na resposta)."""
     r = client.post("/api/v1/auth/producer/request-code", json={"whatsapp": whatsapp})
     assert r.status_code == 200, r.text
-    assert "dev_code" not in r.json()          # o código nunca vai para o navegador
+    corpo = r.json()
+    assert "dev_code" not in corpo and "code" not in corpo   # o código nunca vai para o navegador
     from app.api.v1.auth import otp_storage
-    from app.services.whatsapp_service import numero_nacional
-    code = otp_storage[numero_nacional(whatsapp)]["code"]
-    r = client.post("/api/v1/auth/producer/verify-code", json={"whatsapp": whatsapp, "code": code})
+    return corpo["desafio"], otp_storage[corpo["desafio"]]["code"]
+
+
+def _login_produtor(client, whatsapp):
+    desafio, code = _pedir_codigo(client, whatsapp)
+    r = client.post("/api/v1/auth/producer/verify-code", json={"whatsapp": whatsapp, "code": code, "desafio": desafio})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

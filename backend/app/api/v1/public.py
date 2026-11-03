@@ -84,9 +84,10 @@ def listar_produtos(
             q, p.nome, p.categoria, p.descricao_tecnica, p.producer.business_name if p.producer else None)]
 
     # ---- Busca geográfica ----
-    # Centro da busca: localização do navegador (lat/lng) ou a cidade escolhida
+    # Centro da busca: localização do navegador (lat/lng) ou a cidade escolhida.
+    # Só cidades da tabela embutida (online=False): a busca pública nunca dispara o Nominatim.
     centro = (lat, lng) if lat is not None and lng is not None else (
-        geo_service.coordenadas(cidade, estado or "AC") if cidade else None
+        geo_service.coordenadas(cidade, estado or "AC", online=False) if cidade else None
     )
     usar_raio = centro is not None and raio_km is not None and raio_km < RAIO_MAXIMO
     cidade_exata = geo_service.nome_oficial(cidade, estado) if (cidade and raio_km is None) else None
@@ -119,16 +120,16 @@ def listar_produtos(
     return cards
 
 
-@router.get("/products")
+@router.get("/products", dependencies=[Depends(limitar("vitrine", 120, 60))])
 def vitrine(
     db: Session = Depends(get_db),
-    categoria: Optional[str] = None,
-    estado: Optional[str] = None,
-    cidade: Optional[str] = None,
+    categoria: Optional[str] = Query(None, max_length=60),
+    estado: Optional[str] = Query(None, max_length=2),
+    cidade: Optional[str] = Query(None, max_length=80),
     raio_km: Optional[float] = Query(None, ge=1),
-    lat: Optional[float] = None,
-    lng: Optional[float] = None,
-    q: Optional[str] = None,
+    lat: Optional[float] = Query(None, ge=-90, le=90),
+    lng: Optional[float] = Query(None, ge=-180, le=180),
+    q: Optional[str] = Query(None, max_length=100),
     producer_id: Optional[int] = None,
 ):
     return listar_produtos(db, categoria, estado, cidade, raio_km, lat, lng, q, producer_id)

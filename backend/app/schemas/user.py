@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,9 +18,22 @@ class ProducerCreate(BaseModel):
 
 
 class LoginWhatsApp(BaseModel):
-    whatsapp: str
+    whatsapp: str = Field(min_length=8, max_length=20)
+    # "email" = receber o código no e-mail cadastrado (reserva quando o WhatsApp está fora do ar)
+    canal: Literal["whatsapp", "email"] = "whatsapp"
 
 
 class VerifyOTP(BaseModel):
-    whatsapp: str
-    code: str
+    whatsapp: str = Field(min_length=8, max_length=20)
+    code: str = Field(max_length=10)
+    # Identifica este pedido de código: só quem pediu consegue usá-lo (e errar não apaga o de outra pessoa)
+    desafio: str = Field(min_length=10, max_length=64)
+
+
+class TrocarWhatsApp(BaseModel):
+    whatsapp: str = Field(min_length=8, max_length=20)
+
+
+class ConfirmarWhatsApp(BaseModel):
+    whatsapp: str = Field(min_length=8, max_length=20)
+    code: str = Field(max_length=10)

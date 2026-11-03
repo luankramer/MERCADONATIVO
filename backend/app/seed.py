@@ -17,7 +17,7 @@ from app.models.product_model import STATUS_APROVADO, STATUS_PENDENTE, Product
 from app.models.review_model import Review
 from app.models.user_model import Producer
 from app.services import geo_service
-from app.services.ai_service import analisar_produto
+from app.services.curadoria_service import analisar_produto
 
 PRODUTORES = [
     dict(name="Dona Carmem", business_name="Doce Querência", whatsapp="68999112233", city="Rio Branco",
@@ -97,7 +97,7 @@ def main() -> None:
                 nome=nome, preco=preco, categoria=cat, estoque=est, destaque=dest, status=status,
                 descricao_tecnica=desc, historia=hist, producer_id=lojas[loja].id,
                 visualizacoes=340 if loja == "Doce Querência" else 60, contatos_whatsapp=20,
-                analise_ia=json.dumps(analisar_produto(nome, desc, hist, cat), ensure_ascii=False),
+                analise_curadoria=json.dumps(analisar_produto(nome, desc, hist, cat), ensure_ascii=False),
                 created_at=datetime.utcnow() - timedelta(hours=2),
             )
             db.add(prod)

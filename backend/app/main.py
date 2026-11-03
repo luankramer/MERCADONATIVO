@@ -1,4 +1,5 @@
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -8,14 +9,14 @@ from sqlalchemy import func
 
 import app.models  # noqa: F401  (registra todas as tabelas)
 from app.api.v1 import (
-    admin, adm_auth, ai, auth, calculadora, checkout, dashboard, mercadopago, producers, products, public,
+    admin, adm_auth, auth, calculadora, checkout, dashboard, mercadopago, producers, products, public,
 )
 from app.core.config import settings
 from app.db.database import SessionLocal, engine
 from app.db.migrations import run_migrations
 from app.models.admin_model import NIVEL_SUPER, Admin
 from app.models.user_model import Producer
-from app.services import geo_service, payment_service
+from app.services import geo_service, payment_service, tarefas_service
 from app.services.whatsapp_service import numero_nacional
 
 log = logging.getLogger("mercado_nativo")
@@ -55,12 +56,19 @@ async def lifespan(_: FastAPI):
         preparar_banco()
     except Exception as e:  # mensagem clara em vez de um traceback enorme
         print("\n❌ Não foi possível conectar/preparar o banco de dados.")
-        print(f"   DATABASE_URL = {settings.DATABASE_URL}")
+        url_sem_senha = re.sub(r"://([^:/@]+):[^@]*@", r"://\1:****@", settings.DATABASE_URL)  # sem a senha na tela
+        print(f"   DATABASE_URL = {url_sem_senha}")
         print("   Verifique se o MySQL está ligado e se o banco 'mercado_nativo' existe.")
         print(f"   Detalhe: {e}\n")
         raise
     print(f"✅ Mercado Nativo API pronta  |  pagamentos: {payment_service.modo_pagamento()}  |  docs: /docs")
+    aviso = payment_service.aviso_configuracao()
+    if aviso:
+        print(f"⚠️  {aviso}")
+    if settings.TAREFAS_AUTOMATICAS:
+        tarefas_service.iniciar()  # reconsulta pagamentos e reenvia mensagens em segundo plano
     yield
+    tarefas_service.parar()
 
 
 app = FastAPI(
@@ -106,7 +114,6 @@ app.mount("/uploads", StaticFiles(directory=str(settings.UPLOAD_DIR)), name="upl
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Autenticação"])
 app.include_router(adm_auth.router, prefix="/api/v1/auth/admin", tags=["Gestão Admin"])
-app.include_router(ai.router, prefix="/api/v1", tags=["Inteligência Artificial"])
 app.include_router(products.router, prefix="/api/v1", tags=["Produtos"])
 app.include_router(dashboard.router)
 app.include_router(producers.router)

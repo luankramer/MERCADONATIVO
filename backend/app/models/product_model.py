@@ -31,7 +31,7 @@ class Product(Base):
 
     # --- Curadoria administrativa ---
     status = Column(String(20), default=STATUS_PENDENTE, server_default=STATUS_PENDENTE, index=True)
-    analise_ia = Column(Text, nullable=True)  # JSON com o resultado da análise automática
+    analise_curadoria = Column(Text, nullable=True)  # JSON com o resultado da análise automática
     motivo_rejeicao = Column(String(500), nullable=True)
 
     # --- Vitrine Premium ---
@@ -53,10 +53,10 @@ class Product(Base):
 
     @property
     def analise(self) -> dict | None:
-        if not self.analise_ia:
+        if not self.analise_curadoria:
             return None
         try:
-            return json.loads(self.analise_ia)
+            return json.loads(self.analise_curadoria)
         except ValueError:
             return None
 

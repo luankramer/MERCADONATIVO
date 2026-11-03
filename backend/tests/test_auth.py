@@ -16,8 +16,9 @@ def test_login_numero_nao_cadastrado(client):
 
 
 def test_codigo_incorreto(client, produtor):
-    client.post("/api/v1/auth/producer/request-code", json={"whatsapp": "68999112233"})
-    r = client.post("/api/v1/auth/producer/verify-code", json={"whatsapp": "68999112233", "code": "000000x"})
+    desafio = client.post("/api/v1/auth/producer/request-code", json={"whatsapp": "68999112233"}).json()["desafio"]
+    r = client.post("/api/v1/auth/producer/verify-code",
+                    json={"whatsapp": "68999112233", "code": "000000x", "desafio": desafio})
     assert r.status_code == 401
 
 
@@ -41,13 +42,6 @@ def test_admin_gestao(client, admin):
     assert r.status_code == 403
     # Token de admin não serve como produtor
     assert client.get("/api/v1/dashboard/me", headers=ana).status_code == 403
-
-
-def test_ia_fallback(client):
-    r = client.post("/api/v1/ai/generate", json={"prompt": "orgânico, receita de família", "tipo": "produto"})
-    assert r.status_code == 200
-    assert r.json()["fonte"] == "modelo"
-    assert "receita de família" in r.json()["texto"]
 
 
 def test_bloqueio_de_forca_bruta_no_admin(client):

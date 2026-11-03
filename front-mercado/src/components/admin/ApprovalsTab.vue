@@ -117,7 +117,7 @@ onMounted(carregar)
               </td>
               <td class="px-4 py-3">
                 <span :class="['badge normal-case rounded-full px-2.5 py-1', STATUS[p.status]?.classe]"><Icon :name="STATUS[p.status]?.icone || 'image'" class="w-3 h-3" /> {{ STATUS[p.status]?.texto }}</span>
-                <span v-if="p.analise_ia" class="ml-2 text-xs text-slate-500" title="Adequação na verificação automática">{{ p.analise_ia.score }}%</span>
+                <span v-if="p.analise_curadoria" class="ml-2 text-xs text-slate-500" title="Adequação na verificação automática">{{ p.analise_curadoria.score }}%</span>
               </td>
               <td class="px-6 py-3 text-right">
                 <button v-if="p.status === 'pendente'" class="text-nativo font-medium inline-flex items-center gap-1 hover:underline" @click="analisando = p.id"><Icon name="search" class="w-4 h-4" /> Analisar</button>

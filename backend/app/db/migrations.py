@@ -25,8 +25,32 @@ def _default_sql(column) -> str:
     return f" DEFAULT {value}" if value.upper() in ("0", "1", "NULL") or value.startswith("'") else f" DEFAULT '{value}'"
 
 
+# Colunas que mudaram de nome: (tabela, nome antigo, nome novo, tipo)
+RENOMEADAS = [
+    ("products", "analise_ia", "analise_curadoria", "TEXT"),
+]
+
+
+def _renomear_colunas(engine: Engine) -> None:
+    """Renomeia colunas antigas mantendo os dados (roda antes de adicionar colunas novas)."""
+    inspector = inspect(engine)
+    tabelas = set(inspector.get_table_names())
+    with engine.begin() as conn:
+        for tabela, antiga, nova, tipo in RENOMEADAS:
+            if tabela not in tabelas:
+                continue
+            colunas = {c["name"] for c in inspector.get_columns(tabela)}
+            if antiga in colunas and nova not in colunas:
+                if engine.dialect.name == "mysql":
+                    conn.execute(text(f"ALTER TABLE {tabela} CHANGE {antiga} {nova} {tipo} NULL"))
+                else:
+                    conn.execute(text(f"ALTER TABLE {tabela} RENAME COLUMN {antiga} TO {nova}"))
+                log.warning("Coluna renomeada: %s.%s -> %s", tabela, antiga, nova)
+
+
 def run_migrations(engine: Engine) -> list[str]:
     """Cria tabelas ausentes e adiciona colunas ausentes. Retorna as colunas criadas."""
+    _renomear_colunas(engine)
     Base.metadata.create_all(bind=engine)
 
     inspector = inspect(engine)

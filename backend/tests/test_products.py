@@ -23,11 +23,11 @@ def test_fluxo_completo(client, produtor, admin):
     # Pendente não aparece na vitrine
     assert all(p["id"] != prod["id"] for p in client.get("/api/v1/public/products").json())
 
-    # Curadoria com análise da IA
+    # Curadoria com verificação automática
     det = client.get(f"/api/v1/admin/products/{prod['id']}", headers=admin).json()
-    assert det["analise_ia"]["score"] >= 70
-    assert "sem conservantes" in det["analise_ia"]["positivas"]
-    assert det["analise_ia"]["negativas"] == []
+    assert det["analise_curadoria"]["score"] >= 70
+    assert "sem conservantes" in det["analise_curadoria"]["positivas"]
+    assert det["analise_curadoria"]["negativas"] == []
     assert client.post(f"/api/v1/admin/products/{prod['id']}/aprovar", headers=admin).status_code == 200
 
     # Vitrine + filtro geográfico
@@ -98,8 +98,8 @@ def test_curadoria_detecta_industrializado(client, produtor, admin):
     prod = _criar(client, produtor, nome="Refrigerante de Guaraná",
                   descricao_tecnica="Produto industrializado de revenda, com corante e aromatizante.", historia="")
     det = client.get(f"/api/v1/admin/products/{prod['id']}", headers=admin).json()
-    assert det["analise_ia"]["negativas"]
-    assert det["analise_ia"]["recomendacao"] != "aprovar"
+    assert det["analise_curadoria"]["negativas"]
+    assert det["analise_curadoria"]["recomendacao"] != "aprovar"
     r = client.post(f"/api/v1/admin/products/{prod['id']}/rejeitar", headers=admin, json={"motivo": "Produto industrial"})
     assert r.json()["status"] == "rejeitado"
 

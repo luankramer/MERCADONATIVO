@@ -62,9 +62,24 @@ def _palavra_bate(palavra: str, texto: str, palavras_texto: list[str]) -> bool:
     return False
 
 
+MAX_TERMOS = 8          # ninguém busca com mais palavras que isso; evita buscas gigantes (abuso)
+MAX_TAMANHO_BUSCA = 100
+
+
+def termos_da_busca(busca: str | None) -> list[str]:
+    """Palavras importantes da busca, sem repetição e no máximo MAX_TERMOS."""
+    vistos: list[str] = []
+    for p in normalizar((busca or "")[:MAX_TAMANHO_BUSCA]).split():
+        if p not in _STOP and p not in vistos:
+            vistos.append(p)
+        if len(vistos) >= MAX_TERMOS:
+            break
+    return vistos
+
+
 def corresponde(busca: str | None, *campos: str | None) -> bool:
     """True se TODAS as palavras importantes da busca aparecem em algum dos campos."""
-    termos = [p for p in normalizar(busca).split() if p not in _STOP]
+    termos = termos_da_busca(busca)
     if not termos:
         return True
     texto = " ".join(normalizar(c) for c in campos if c)

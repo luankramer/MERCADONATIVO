@@ -1,22 +1,27 @@
 """Perfil do produtor logado: dados da loja, recebimentos, plano Premium e pedidos."""
+import hmac
+import secrets
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app.core.config import settings
-from app.core.security import create_access_token, get_current_producer
+from app.core.rate_limit import ip_cliente, limitar, registrar
+from app.core.security import create_access_token, get_current_producer, token_produtor
 from app.db.database import get_db
 from app.models.order_model import METODOS, PEDIDO_PAGO, PEDIDO_RETIRADO, Order, PremiumSubscription
 from app.models.user_model import Producer
-from app.schemas.order import PagamentoBrick, PagamentoSimulado
-from app.services import geo_service, payment_service
+from app.schemas.order import CancelamentoMotivo, PagamentoBrick, PagamentoSimulado
+from app.schemas.user import ConfirmarWhatsApp, TrocarWhatsApp
+from app.services import cancelamento_service, conexao_mp_service, geo_service, payment_service
 from app.services.checkout_service import confirmar_pix_simulado, pagar_com_brick, pagar_simulado, sincronizar
+from app.services.notificacao_service import notificar
 from app.services.remocao_service import exportar_dados, remover_produtor
 from app.services.storage_service import remover_arquivo, salvar_imagem
-from app.services.whatsapp_service import numero_nacional
+from app.services.whatsapp_service import enviar_codigo, numero_nacional, numero_valido
 
 router = APIRouter(prefix="/api/v1/producers", tags=["Producers"])
 
@@ -74,6 +79,7 @@ def baixar_meus_dados(db: Session = Depends(get_db), produtor: Producer = Depend
 @router.delete("/me")
 def excluir_minha_conta(db: Session = Depends(get_db), produtor: Producer = Depends(get_current_producer)):
     """O próprio produtor encerra a conta: produtos saem da vitrine e os dados pessoais são apagados."""
+    cancelamento_service.cancelar_pendentes(db, producer_id=produtor.id, motivo="O vendedor encerrou a conta")
     total = remover_produtor(db, produtor)
     db.commit()
     return {"message": f"Conta excluída. {total} produto(s) removido(s) e seus dados pessoais apagados."}
@@ -124,14 +130,9 @@ async def update_producer(
         produtor.endereco_publico = endereco_publico
     if telefone is not None:
         produtor.telefone = telefone.strip() or None
-    if whatsapp is not None and whatsapp.strip():
-        numero = numero_nacional(whatsapp)
-        if len(numero) not in (10, 11):
-            raise HTTPException(400, "WhatsApp inválido.")
-        outro = db.query(Producer).filter(Producer.whatsapp == numero, Producer.id != produtor.id).first()
-        if outro:
-            raise HTTPException(400, "Este WhatsApp já pertence a outro produtor.")
-        produtor.whatsapp = numero
+    if whatsapp is not None and whatsapp.strip() and numero_nacional(whatsapp) != numero_nacional(produtor.whatsapp):
+        # O WhatsApp é o login da conta: trocar exige o código enviado ao número novo
+        raise HTTPException(400, "Para trocar o WhatsApp, use o botão \"Trocar número\": enviamos um código para o número novo.")
     if descricao is not None:
         produtor.description = descricao
 
@@ -145,15 +146,96 @@ async def update_producer(
     return {"message": "Perfil atualizado com sucesso!", "perfil": _perfil(produtor)}
 
 
+# ---------------- Troca do WhatsApp de login (com código no número novo) ----------------
+# {producer_id: {"numero": novo, "code": str, "expira": datetime, "tentativas": int}}
+troca_whatsapp: dict[int, dict] = {}
+
+
+@router.post("/me/whatsapp/codigo")
+async def pedir_codigo_troca(dados: TrocarWhatsApp, request: Request, db: Session = Depends(get_db),
+                             produtor: Producer = Depends(get_current_producer)):
+    """1º passo: manda um código para o NÚMERO NOVO (prova de que o produtor tem esse WhatsApp)."""
+    numero = numero_nacional(dados.whatsapp)
+    if not numero_valido(numero):
+        raise HTTPException(400, "WhatsApp inválido. Use DDD + número, ex.: (68) 9 9999-9999.")
+    if numero == numero_nacional(produtor.whatsapp):
+        raise HTTPException(400, "Este já é o seu WhatsApp.")
+    registrar(f"troca-whats:{produtor.id}", 3, 600)
+    registrar(f"troca-whats-ip:{ip_cliente(request)}", 10, 600)
+    if db.query(Producer).filter(Producer.whatsapp == numero, Producer.id != produtor.id).first():
+        raise HTTPException(400, "Este WhatsApp já pertence a outro produtor.")
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    troca_whatsapp[produtor.id] = {"numero": numero, "code": code, "tentativas": 0,
+                                   "expira": datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)}
+    texto = (f"🍃 *Mercado Nativo*\n\nCódigo para confirmar este número como o novo WhatsApp da sua conta: *{code}*\n\n"
+             f"Vale por {settings.OTP_EXPIRE_MINUTES} minutos. Se não foi você, ignore.")
+    if await enviar_codigo(numero, code, texto):
+        return {"message": f"Enviamos um código para {numero}. Digite-o para confirmar a troca."}
+    if settings.OTP_DEV_MODE:
+        print(f"\n🔑 [MODO DESENVOLVIMENTO] Código de troca de WhatsApp do produtor {produtor.id}: {code}\n")
+        return {"message": "WhatsApp indisponível. Veja o código no terminal do backend."}
+    troca_whatsapp.pop(produtor.id, None)
+    raise HTTPException(502, "Não conseguimos enviar o código para o número novo agora. Tente em instantes.")
+
+
+@router.post("/me/whatsapp/confirmar")
+async def confirmar_troca(dados: ConfirmarWhatsApp, db: Session = Depends(get_db),
+                          produtor: Producer = Depends(get_current_producer)):
+    """2º passo: confere o código e troca o número. As outras sessões abertas são encerradas."""
+    pedido = troca_whatsapp.get(produtor.id)
+    numero = numero_nacional(dados.whatsapp)
+    if not pedido or pedido["numero"] != numero or datetime.utcnow() > pedido["expira"]:
+        troca_whatsapp.pop(produtor.id, None)
+        raise HTTPException(400, "Código expirado. Peça um novo.")
+    if not hmac.compare_digest(pedido["code"].encode(), dados.code.strip().encode()):
+        pedido["tentativas"] += 1
+        if pedido["tentativas"] >= 5:
+            troca_whatsapp.pop(produtor.id, None)
+            raise HTTPException(429, "Muitas tentativas. Peça um novo código.")
+        raise HTTPException(400, "Código incorreto.")
+    if db.query(Producer).filter(Producer.whatsapp == numero, Producer.id != produtor.id).first():
+        troca_whatsapp.pop(produtor.id, None)
+        raise HTTPException(400, "Este WhatsApp já pertence a outro produtor.")
+    troca_whatsapp.pop(produtor.id, None)
+    antigo = produtor.whatsapp
+    produtor.whatsapp = numero
+    produtor.mp_link_jti = None                          # link do Mercado Pago enviado ao número antigo perde o valor
+    produtor.token_versao = int(produtor.token_versao or 0) + 1   # derruba as outras sessões
+    db.commit()
+    db.refresh(produtor)
+    if antigo:
+        notificar(antigo, "🍃 *Mercado Nativo*\n\nO WhatsApp da sua conta de produtor foi trocado para outro número. "
+                          "Se não foi você, fale com a equipe do Mercado Nativo imediatamente.")
+    return {"message": "WhatsApp trocado. Use o número novo para entrar.", "access_token": token_produtor(produtor),
+            "perfil": _perfil(produtor)}
+
+
 # ---------------- Recebimentos: conectar conta Mercado Pago (split) ----------------
 @router.post("/me/mercadopago/conectar")
 def conectar_mercadopago(produtor: Producer = Depends(get_current_producer)):
     """Gera o link de autorização do Mercado Pago (o produtor faz login lá, não aqui)."""
-    state = create_access_token(produtor.id, "mp_oauth", timedelta(minutes=15))
+    state = create_access_token(produtor.id, "mp_oauth", timedelta(minutes=15),
+                                extra={"tv": int(produtor.token_versao or 0)})
     try:
         return {"url": payment_service.url_conexao(state)}
     except payment_service.PaymentError as e:
         raise HTTPException(400, str(e))
+
+
+@router.post("/me/mercadopago/enviar-link", dependencies=[Depends(limitar("mp_link", 5, 3600))])
+async def enviar_link_mercadopago(db: Session = Depends(get_db), produtor: Producer = Depends(get_current_producer)):
+    """Manda para o WhatsApp do produtor um link para conectar pelo celular (sem precisar entrar no site)."""
+    try:
+        enviado = await conexao_mp_service.enviar_link_whatsapp(produtor)
+    except conexao_mp_service.ConexaoError as e:
+        raise HTTPException(400, str(e))
+    if not enviado:
+        # Sem envio, o link anterior (se chegou) continua valendo. No modo de desenvolvimento
+        # o link novo aparece na janela do backend, então ele é guardado.
+        db.commit() if settings.OTP_DEV_MODE else db.rollback()
+        raise HTTPException(503, "Não conseguimos enviar pelo WhatsApp agora. Tente de novo em alguns minutos.")
+    db.commit()
+    return {"message": f"Link enviado para o WhatsApp {numero_nacional(produtor.whatsapp)}."}
 
 
 @router.delete("/me/mercadopago")
@@ -242,13 +324,16 @@ def _pedido_dict(o: Order) -> dict:
         "metodo": METODOS.get(o.metodo or "", "PIX"),
         "created_at": o.created_at.isoformat() if o.created_at else None,
         "paid_at": o.paid_at.isoformat() if o.paid_at else None,
+        "pode_cancelar": cancelamento_service.pode_cancelar(o, "produtor"),
+        **cancelamento_service.resumo(o),
     }
 
 
 @router.get("/me/orders")
 def meus_pedidos(db: Session = Depends(get_db), produtor: Producer = Depends(get_current_producer)):
     pedidos = (
-        db.query(Order).filter(Order.producer_id == produtor.id, Order.status.in_([PEDIDO_PAGO, PEDIDO_RETIRADO]))
+        db.query(Order).filter(Order.producer_id == produtor.id,
+                               (Order.status.in_([PEDIDO_PAGO, PEDIDO_RETIRADO])) | (Order.paid_at.isnot(None)))
         .order_by(Order.id.desc()).limit(50).all()
     )
     return [_pedido_dict(o) for o in pedidos]
@@ -262,5 +347,20 @@ def marcar_retirado(order_id: int, db: Session = Depends(get_db), produtor: Prod
     if pedido.status != PEDIDO_PAGO:
         raise HTTPException(400, "Só pedidos pagos podem ser marcados como retirados.")
     pedido.status = PEDIDO_RETIRADO
+    pedido.retirado_em = datetime.utcnow()
     db.commit()
+    return _pedido_dict(pedido)
+
+
+@router.post("/me/orders/{order_id}/cancelar")
+def cancelar_pedido(order_id: int, dados: CancelamentoMotivo, db: Session = Depends(get_db),
+                    produtor: Producer = Depends(get_current_producer)):
+    """O produtor cancela antes da retirada (ex.: o produto acabou). O cliente recebe o dinheiro de volta."""
+    pedido = db.get(Order, order_id)
+    if not pedido or pedido.producer_id != produtor.id:
+        raise HTTPException(404, "Pedido não encontrado")
+    try:
+        cancelamento_service.cancelar(db, pedido, "produtor", dados.motivo)
+    except cancelamento_service.CancelamentoError as e:
+        raise HTTPException(400, str(e))
     return _pedido_dict(pedido)
