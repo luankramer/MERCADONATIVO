@@ -14,6 +14,8 @@ class Admin(Base):
     nome = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=False)
+    # WhatsApp para receber o código de recuperação de senha (só números, com DDD)
+    whatsapp = Column(String(20), nullable=True)
     ativo = Column(Boolean, default=True)
     nivel = Column(String(20), default=NIVEL_ADMIN, server_default=NIVEL_ADMIN)
 

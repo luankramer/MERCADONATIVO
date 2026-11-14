@@ -1,5 +1,5 @@
 """Login e gestão da equipe administrativa."""
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -9,9 +9,21 @@ from app.core.security import (
 )
 from app.db.database import get_db
 from app.models.admin_model import NIVEL_ADMIN, Admin
-from app.schemas.admin import AdminCreate, AdminLogin, AdminUpdate
+from app.schemas.admin import AdminCreate, AdminLogin, AdminRecuperar, AdminRedefinir, AdminUpdate
+from app.services import recuperacao_admin_service as recuperacao
+from app.services.whatsapp_service import numero_nacional, numero_valido
 
 router = APIRouter()
+
+
+def _whatsapp_ou_erro(numero: str | None) -> str | None:
+    """WhatsApp opcional do admin: só dígitos, com DDD."""
+    if not (numero or "").strip():
+        return None
+    nacional = numero_nacional(numero)
+    if not numero_valido(nacional):
+        raise HTTPException(400, "WhatsApp inválido. Use DDD + número, ex.: (68) 9 9999-9999.")
+    return nacional
 
 
 def _admin_dict(admin: Admin) -> dict:
@@ -19,6 +31,7 @@ def _admin_dict(admin: Admin) -> dict:
         "id": admin.id,
         "nome": admin.nome,
         "email": admin.email,
+        "whatsapp": admin.whatsapp or "",
         "nivel": "Super Admin" if admin.is_super else "Administrador",
         "is_super": admin.is_super,
     }
@@ -35,7 +48,8 @@ async def list_admins(db: Session = Depends(get_db), _=Depends(get_current_admin
 async def register_admin(admin: AdminCreate, db: Session = Depends(get_db), _=Depends(get_super_admin)):
     if db.query(Admin).filter(func.lower(Admin.email) == admin.email.lower()).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
-    novo = Admin(nome=admin.nome, email=admin.email.lower(), senha_hash=hash_password(admin.senha), nivel=NIVEL_ADMIN)
+    novo = Admin(nome=admin.nome, email=admin.email.lower(), senha_hash=hash_password(admin.senha), nivel=NIVEL_ADMIN,
+                 whatsapp=_whatsapp_ou_erro(admin.whatsapp))
     db.add(novo)
     db.commit()
     return {"mensagem": "Acesso criado com sucesso"}
@@ -53,6 +67,8 @@ async def update_admin(admin_id: int, admin_data: AdminUpdate, db: Session = Dep
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
     admin_db.nome = admin_data.nome
     admin_db.email = admin_data.email.lower()
+    if "whatsapp" in admin_data.model_fields_set:  # só mexe se o campo veio na edição
+        admin_db.whatsapp = _whatsapp_ou_erro(admin_data.whatsapp)
     if admin_data.senha:  # Só atualiza a senha se for preenchida
         if len(admin_data.senha) < 8:
             raise HTTPException(400, "A senha precisa ter pelo menos 8 caracteres.")
@@ -103,3 +119,32 @@ async def login_admin(admin: AdminLogin, request: Request, db: Session = Depends
 @router.get("/me")
 async def me(admin: Admin = Depends(get_current_admin)):
     return _admin_dict(admin)
+
+
+# 6. Recuperação de conta ("Esqueci minha senha")
+@router.post("/recuperar")
+async def pedir_recuperacao(req: AdminRecuperar, request: Request, tarefas: BackgroundTasks,
+                            db: Session = Depends(get_db)):
+    ip = ip_cliente(request)
+    registrar(f"admin-recuperar-ip:{ip}", 5, 900)
+    registrar(f"admin-recuperar-email:{req.email.lower()}", 3, 3600)
+    desafio, envio = recuperacao.preparar(db, req.email)
+    if envio:
+        tarefas.add_task(recuperacao.enviar, envio)  # depois da resposta: não revela se o e-mail existe
+    return {
+        "desafio": desafio,
+        "mensagem": "Se este e-mail for de um administrador, enviamos um código de 6 números para o "
+                    "WhatsApp e o e-mail cadastrados. Ele vale por 10 minutos.",
+    }
+
+
+@router.post("/recuperar/confirmar")
+async def confirmar_recuperacao(req: AdminRedefinir, request: Request, db: Session = Depends(get_db)):
+    registrar(f"admin-recuperar-confirmar-ip:{ip_cliente(request)}", 20, 900)
+    try:
+        admin = recuperacao.redefinir(db, req.desafio, req.codigo, req.nova_senha)
+    except recuperacao.RecuperacaoError as e:
+        raise HTTPException(400, str(e)) from e
+    # Libera o login que possa ter ficado bloqueado por senhas erradas
+    limpar(f"admin-login:{ip_cliente(request)}:{admin.email.lower()}")
+    return {"mensagem": "Senha alterada. Entre com a nova senha.", "email": admin.email}

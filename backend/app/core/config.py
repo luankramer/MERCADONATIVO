@@ -83,6 +83,8 @@ class Settings:
     ADMIN_TOKEN_HOURS = int(os.getenv("ADMIN_TOKEN_HOURS", "8"))
 
     ADMIN_MASTER_EMAIL = os.getenv("ADMIN_MASTER_EMAIL", "cleytonkramer@outlook.com").lower()
+    # WhatsApp do Super Admin para a recuperação de senha (usado se ele não tiver um no cadastro)
+    ADMIN_MASTER_WHATSAPP = os.getenv("ADMIN_MASTER_WHATSAPP", "").strip()
 
     # WhatsApp (Evolution API)
     EVOLUTION_BASE_URL = os.getenv("EVOLUTION_BASE_URL", "")

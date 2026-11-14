@@ -7,10 +7,10 @@ import { toast } from '@/services/toast'
 import { confirmar } from '@/services/confirm'
 import Icon from '@/components/ui/Icon.vue'
 
-interface AdminItem { id: number; nome: string; email: string; nivel: string; is_super: boolean }
+interface AdminItem { id: number; nome: string; email: string; whatsapp: string; nivel: string; is_super: boolean }
 
 const admins = ref<AdminItem[]>([])
-const form = reactive({ nome: '', email: '', senha: '' })
+const form = reactive({ nome: '', email: '', whatsapp: '', senha: '' })
 const idEdicao = ref<number | null>(null)
 const isLoading = ref(false)
 const isMasterAdmin = ref(session.adminSuper)
@@ -47,13 +47,21 @@ async function salvarAdmin() {
 
 function prepararEdicao(admin: AdminItem) {
   idEdicao.value = admin.id
-  Object.assign(form, { nome: admin.nome, email: admin.email, senha: '' })
+  Object.assign(form, { nome: admin.nome, email: admin.email, whatsapp: formatarWhatsapp(admin.whatsapp), senha: '' })
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
 }
 
 function cancelarEdicao() {
   idEdicao.value = null
-  Object.assign(form, { nome: '', email: '', senha: '' })
+  Object.assign(form, { nome: '', email: '', whatsapp: '', senha: '' })
+}
+
+/** 68981071483 -> (68) 9 8107-1483 */
+function formatarWhatsapp(numero: string) {
+  const d = (numero || '').replace(/\D/g, '')
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d[2]} ${d.slice(3, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return d
 }
 
 async function excluirAdmin(admin: AdminItem) {
@@ -88,6 +96,8 @@ async function excluirAdmin(admin: AdminItem) {
               <td class="px-6 py-4">
                 <p class="font-semibold text-slate-900">{{ admin.nome }}</p>
                 <p class="text-xs text-slate-600">{{ admin.email }}</p>
+                <p v-if="admin.whatsapp" class="text-xs text-slate-600">WhatsApp: {{ formatarWhatsapp(admin.whatsapp) }}</p>
+                <p v-else-if="isMasterAdmin" class="text-xs text-amber-700">Sem WhatsApp: não recebe o código de recuperação</p>
               </td>
               <td class="px-4 py-4">
                 <span :class="['badge normal-case rounded-full px-2.5 py-1', admin.is_super ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600']">{{ admin.nivel }}</span>
@@ -104,12 +114,16 @@ async function excluirAdmin(admin: AdminItem) {
 
     <form v-if="isMasterAdmin" class="card p-6 sm:p-8" @submit.prevent="salvarAdmin">
       <h3 class="font-serif text-lg font-bold text-slate-900 pb-4 mb-5 border-b border-slate-100">{{ idEdicao ? 'Editar Acesso' : 'Cadastrar Novo Acesso' }}</h3>
-      <div class="grid md:grid-cols-3 gap-4">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div><label class="label">Nome Completo</label><input v-model="form.nome" required minlength="2" class="input" placeholder="Ex: João da Silva" /></div>
         <div><label class="label">E-mail Institucional</label><input v-model="form.email" type="email" required class="input" placeholder="nome@mercadonativo.com" /></div>
         <div>
+          <label class="label">WhatsApp (recuperar a senha)</label>
+          <input v-model="form.whatsapp" type="tel" inputmode="tel" autocomplete="tel" class="input" placeholder="(68) 9 9999-9999" />
+        </div>
+        <div>
           <label class="label">{{ idEdicao ? 'Nova Senha (opcional)' : 'Senha Inicial' }}</label>
-          <input v-model="form.senha" type="password" :required="!idEdicao" minlength="6" class="input" autocomplete="new-password" />
+          <input v-model="form.senha" type="password" :required="!idEdicao" minlength="8" class="input" autocomplete="new-password" />
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">

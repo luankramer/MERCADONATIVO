@@ -261,6 +261,15 @@ publicar o site de verdade.
 
 ---
 
+## 3.5 Esqueci a senha do admin
+
+Na tela `/admin/login`, toque em **Esqueci minha senha**. O código de 6 números vai para o WhatsApp do
+administrador (cadastrado em *Gestão de Administradores*; para o Super Admin também vale o
+`ADMIN_MASTER_WHATSAPP` do `.env`) e para o e-mail, se o SMTP estiver configurado. O código vale 10 minutos
+e aceita 5 tentativas. Sem acesso ao WhatsApp, no computador do servidor use `redefinir_admin.bat`.
+
+---
+
 ## 4. WhatsApp (login por código)
 
 Configure `EVOLUTION_BASE_URL`, `EVOLUTION_TOKEN` e `EVOLUTION_INSTANCE` no `.env`.

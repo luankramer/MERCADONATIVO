@@ -3,6 +3,7 @@
 Datas no horário de Rio Branco (AC).
 
 ## 14/11/2026: publicação no Railway
+- Recuperação de conta do admin ("Esqueci minha senha"): código de 6 números pelo WhatsApp e pelo e-mail cadastrados, válido por 10 minutos e com 5 tentativas; campo WhatsApp no cadastro dos administradores.
 - Configuração dos serviços Backend e Site (`railway.json`) e guia `DEPLOY_RAILWAY.md`.
 - Backend aceita o endereço do MySQL do Railway, usa o domínio público dele e guarda as fotos num volume.
 - Primeiro acesso num servidor novo: Super Admin pela variável `ADMIN_INICIAL_SENHA` e dados de demonstração com `DADOS_DEMO=true`.
