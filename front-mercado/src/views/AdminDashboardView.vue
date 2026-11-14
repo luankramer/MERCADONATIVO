@@ -11,6 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const menuAberto = ref(false)
 const pendentes = ref(0)
+const cancelamentos = ref(0)  // pedidos de cancelamento esperando a equipe
 
 const titulo = computed(() => (route.meta.titulo as string) || 'Painel')
 
@@ -19,6 +20,9 @@ async function atualizarPendentes() {
     const c = await api<Record<string, number>>('/api/v1/admin/products/counts', { auth: 'admin' })
     pendentes.value = c.pendente || 0
   } catch { /* sem bloqueio */ }
+  try {
+    cancelamentos.value = (await api<{ total: number }>('/api/v1/admin/orders/solicitacoes/total', { auth: 'admin' })).total || 0
+  } catch { /* sem bloqueio */ }
 }
 // As abas chamam isto após aprovar/rejeitar para atualizar o contador do menu
 provide('atualizarPendentes', atualizarPendentes)
@@ -26,8 +30,9 @@ onMounted(atualizarPendentes)
 
 const itens = [
   { to: '/admin/visao-geral', icone: 'grid', texto: 'Visão Geral' },
-  { to: '/admin/aprovacoes', icone: 'image', texto: 'Aprovações', contador: true },
+  { to: '/admin/aprovacoes', icone: 'image', texto: 'Aprovações', contador: 'aprovacoes' },
   { to: '/admin/vitrine-premium', icone: 'star', texto: 'Vitrine Premium' },
+  { to: '/admin/pedidos', icone: 'package', texto: 'Pedidos e SAC', contador: 'cancelamentos' },
   { to: '/admin/vendedores', icone: 'user', texto: 'Vendedores' },
 ]
 
@@ -55,7 +60,11 @@ function logout() {
                       class="flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] hover:bg-painel-item transition"
                       active-class="bg-painel-item text-white">
             <Icon :name="item.icone" class="w-5 h-5" /> {{ item.texto }}
-            <span v-if="item.contador && pendentes" class="ml-auto text-xs font-bold text-amber-300 bg-amber-900/60 border border-amber-700 rounded-full px-2 py-0.5">{{ pendentes }}</span>
+            <span v-if="item.contador && (item.contador === 'aprovacoes' ? pendentes : cancelamentos)"
+                  class="ml-auto text-xs font-bold text-amber-300 bg-amber-900/60 border border-amber-700 rounded-full px-2 py-0.5"
+                  :title="item.contador === 'cancelamentos' ? 'Pedidos de cancelamento esperando resposta' : 'Produtos esperando aprovação'">
+              {{ item.contador === 'aprovacoes' ? pendentes : cancelamentos }}
+            </span>
           </RouterLink>
           <p class="px-4 pt-6 pb-1 text-[11px] font-semibold uppercase tracking-widest text-slate-500">Sistema</p>
           <RouterLink to="/admin/administradores" @click="menuAberto = false"

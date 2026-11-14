@@ -6,6 +6,7 @@ import { api } from '@/services/api'
 import { moeda } from '@/utils/format'
 import { ATUALIZADO_EM, EMPRESA, POLITICAS, VERSAO, politica } from '@/content/politicas'
 import Icon from '@/components/ui/Icon.vue'
+import SiteRodape from '@/components/ui/SiteRodape.vue'
 import PublicHeader from '@/components/catalog/PublicHeader.vue'
 import BottomNav from '@/components/ui/BottomNav.vue'
 
@@ -78,6 +79,7 @@ function partes(texto: string): { t: string; pendente: boolean }[] {
           Ficou com dúvida? Veja a página <RouterLink to="/ajuda" class="text-nativo font-semibold underline">Ajuda</RouterLink>.
         </p>
       </article>
+      <div class="order-3 lg:order-none lg:col-span-2 w-full max-w-3xl mx-auto"><SiteRodape /></div>
     </main>
     <BottomNav variante="publico" />
   </div>

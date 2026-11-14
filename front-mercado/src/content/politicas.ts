@@ -12,18 +12,20 @@
  * eletrônico). Antes de publicar o site de verdade, peça para um(a) advogado(a) revisar.
  */
 
-export const VERSAO = '1.0'
-export const ATUALIZADO_EM = '22 de outubro de 2026'
+export const VERSAO = '1.2'
+export const ATUALIZADO_EM = '13 de novembro de 2026'
 
 export const EMPRESA = {
   nome: 'Mercado Nativo',
   responsavel: 'Cleyton Luan Kramer Vieira',
-  documento: '[CPF ou CNPJ do responsável]',
+  // CNPJ fictício (trabalho acadêmico). Troque pelo CNPJ real antes de publicar o site de verdade.
+  documento: 'CNPJ 00.000.000/0001-00 (fictício, uso acadêmico)',
   cidade: 'Rio Branco – AC',
-  endereco: '[endereço para correspondência]',
-  email: '[e-mail de contato]',
+  endereco: 'BR-317, km 18, Zona Rural',
+  // Vem do SAC configurado em front-mercado/.env (VITE_SUPORTE_EMAIL); sem ele, fica o aviso para preencher
+  email: String(import.meta.env.VITE_SUPORTE_EMAIL || '').trim() || 'docequerencia@outlook.com',
   encarregado: 'Cleyton Luan Kramer Vieira',
-  emailPrivacidade: '[e-mail do encarregado de dados]',
+  emailPrivacidade: String(import.meta.env.VITE_SUPORTE_EMAIL || '').trim() || 'docequerencia@outlook.com',
 }
 
 export interface Secao {
@@ -41,7 +43,7 @@ export interface Politica {
 }
 
 const contato = () =>
-  `Fale com a equipe pelo e-mail ${EMPRESA.email} ou pela página Ajuda. Sobre dados pessoais, escreva para ${EMPRESA.emailPrivacidade}.`
+  `Fale com a equipe pelo SAC, no rodapé de todas as páginas (WhatsApp, telefone ou o e-mail ${EMPRESA.email}), ou pela página Ajuda. Sobre dados pessoais, escreva para ${EMPRESA.emailPrivacidade}.`
 
 export const POLITICAS: Politica[] = [
   // ------------------------------------------------------------------ PRIVACIDADE
@@ -90,7 +92,6 @@ export const POLITICAS: Politica[] = [
           'Mercado Pago: processa os pagamentos e a divisão dos valores. Tem a sua própria política de privacidade.',
           'WhatsApp (por meio da Evolution API): envio dos códigos de acesso e dos avisos de pedido.',
           'Mapas e CEP: o nome da cidade pode ser consultado no OpenStreetMap para calcular distâncias, e o CEP digitado no cadastro é consultado no ViaCEP para preencher o endereço.',
-          'Sugestão de textos: as palavras digitadas no botão "Sugerir texto" são processadas por uma inteligência artificial instalada no próprio servidor. Se o serviço opcional Groq estiver ligado, só essas palavras são enviadas a ele (sem nome nem contato).',
           'Hospedagem e serviços de apoio do site (servidor, fontes de letra do Google e o tradutor VLibras), que podem receber o endereço IP para funcionar.',
           'Autoridades públicas, quando a lei ou uma ordem judicial exigir.',
           'Alguns desses serviços guardam dados fora do Brasil (transferência internacional — LGPD, art. 33). Usamos apenas empresas que oferecem proteção adequada.',
@@ -258,7 +259,8 @@ export const POLITICAS: Politica[] = [
     icone: 'shopping-bag',
     resumo: [
       'Você paga com Pix, cartão de crédito ou débito, e retira o produto com o vendedor.',
-      'Pode desistir em até 7 dias depois de retirar e receber o dinheiro de volta.',
+      'Pedido pago: você pede o cancelamento pelo link do pedido. A equipe confirma com o vendedor e, se aprovado, o dinheiro volta automaticamente.',
+      'Pode desistir em até 7 dias depois de retirar, pelo mesmo link ou pelo SAC.',
       'Se o produto vier com problema, você tem direito a troca ou devolução do dinheiro.',
       'O dinheiro volta pelo mesmo meio usado no pagamento.',
     ],
@@ -286,21 +288,26 @@ export const POLITICAS: Politica[] = [
         titulo: '3. Retirada',
         itens: [
           'A retirada é feita com o vendedor, no local e no horário combinados pelo WhatsApp. Não fazemos entregas.',
-          'Recomendamos combinar a retirada em até 7 dias depois do pagamento. Se não for possível retirar, você pode cancelar e receber o valor de volta.',
+          'Recomendamos combinar a retirada em até 7 dias depois do pagamento. Se não for possível retirar, você pode pedir o cancelamento e receber o valor de volta.',
           'Na retirada, confira o produto e informe o número do pedido.',
         ],
       },
       {
         titulo: '4. Cancelar antes de retirar',
         texto: [
-          'Enquanto o produto não foi retirado, você pode cancelar e receber 100% do valor pago. Avise o vendedor pelo WhatsApp ou fale com a equipe informando o número do pedido.',
+          'Pedido ainda não pago: você cancela na hora pelo link do pedido. Nada é cobrado e o código Pix deixa de valer.',
+          'Pedido já pago: abra o link do seu pedido (ele também chega no seu WhatsApp), toque em "Quero cancelar este pedido", digite os 4 últimos números do WhatsApp usado na compra e confirme. Isso envia um pedido de cancelamento para a equipe do Mercado Nativo.',
+          'A equipe confirma com o vendedor se o produto já foi entregue ou enviado. Se ainda não foi, o cancelamento é aprovado e você recebe 100% do valor pago, sem precisar explicar o motivo. Se o produto já tinha sido entregue, o pedido de cancelamento é recusado e você recebe o motivo pelo WhatsApp; nesse caso continua valendo o direito de arrependimento do item 5.',
+          'Respondemos os pedidos de cancelamento em até 2 dias úteis.',
+          'Se o vendedor não puder entregar (por exemplo, o produto acabou), ele também pode cancelar. Você recebe um aviso no WhatsApp e o valor de volta.',
         ],
       },
       {
         titulo: '5. Direito de arrependimento (7 dias)',
         texto: [
           'Como a compra é feita pela internet, você pode desistir em até 7 dias depois de retirar o produto, sem precisar explicar o motivo, e receber de volta todo o valor pago (Código de Defesa do Consumidor, art. 49).',
-          'Combine a devolução com o vendedor. Para alimentos, faça isso o quanto antes e mantenha o produto bem guardado, para ele ainda estar em boas condições.',
+          'Como pedir: na página do pedido, toque em "Quero cancelar este pedido" (a opção aparece enquanto o prazo vale), ou fale com o SAC (no rodapé do site, por WhatsApp, telefone ou e-mail) informando o número do pedido. A página do pedido mostra até que dia vale o seu prazo.',
+          'A equipe do Mercado Nativo faz a devolução do dinheiro pelo Mercado Pago. Combine com o vendedor a devolução do produto. Para alimentos, faça isso o quanto antes e mantenha o produto bem guardado, para ele ainda estar em boas condições.',
         ],
       },
       {
@@ -316,7 +323,8 @@ export const POLITICAS: Politica[] = [
         itens: [
           'Pix: o valor volta para a mesma conta de onde saiu.',
           'Cartão: o estorno aparece na fatura. O prazo depende do banco do cartão e pode levar até duas faturas.',
-          'A devolução é feita pelo Mercado Pago, a pedido da equipe do Mercado Nativo.',
+          'A devolução é feita pelo Mercado Pago, automaticamente, assim que o cancelamento é aprovado. Você e o vendedor recebem um aviso no WhatsApp.',
+          'Se a devolução não puder ser feita naquele momento, o pedido continua aberto e a equipe resolve com o vendedor e com você.',
         ],
       },
       {
@@ -393,6 +401,9 @@ export const POLITICAS: Politica[] = [
         itens: [
           'Em cada venda paga pelo site você recebe {repasse}% do valor; o Mercado Nativo fica com {comissao}%.',
           'Conectando a sua conta Mercado Pago em "Meu perfil", o valor cai direto na sua conta. Nunca pedimos senha de banco.',
+          'Se não puder entregar um pedido, cancele pelo painel ("Não consigo entregar"). O cliente recebe o dinheiro de volta e o produto volta para o seu estoque. Cancelamentos frequentes podem levar às medidas do item 5.',
+          'Se o cliente pedir o cancelamento de um pedido pago, aparece um aviso no seu painel e a equipe do Mercado Nativo fala com você para confirmar se o produto já foi entregue ou enviado. Responda com a verdade e, enquanto isso, não entregue o produto. Se ainda não entregou, o cancelamento é aprovado e o valor volta ao cliente.',
+          'Quando um pedido é cancelado e o valor devolvido, o seu repasse daquela venda também é desfeito. Na conta Mercado Pago conectada, a devolução sai da própria venda.',
         ],
       },
       {

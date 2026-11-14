@@ -10,7 +10,6 @@ Plataforma web para integração de pequenos produtores e artesãos ao mercado c
 | Banco | MySQL (`mercado_nativo`) |
 | Login do produtor | Código pelo WhatsApp (Evolution API) |
 | Pagamentos | Mercado Pago: crédito, débito e Pix, com split automático 90/10 |
-| Sugestão de textos | Ollama local (`qwen2.5:3b`) → Groq (opcional) → texto de reserva |
 
 ---
 
@@ -84,13 +83,14 @@ Acesse http://localhost:5173
 | `/vitrine/produto/:id` | Produto: galeria, história, produtor, **Comprar**, **Reservar pelo WhatsApp**, avaliações |
 | `/produtor/:id` | Perfil público do produtor ("Nossa Jornada") |
 | `/pedido/:codigo` | Pagamento (crédito, débito ou Pix), confirmação e contato para retirada |
-| `/login-produtor`, `/cadastro-produtor` | Login por código no WhatsApp e cadastro com IA |
+| `/login-produtor`, `/cadastro-produtor` | Login por código no WhatsApp e cadastro em 4 passos |
 | `/painel` | Painel do produtor: visitas, contatos, conversão, receita, pedidos, estoque, Calculadora de Custos, plano Premium |
 | `/painel/produto/novo`, `/painel/produto/:id` | Cadastro/edição com fotos e "A Alma do Produto" |
 | `/painel/perfil` | Perfil, endereço (privacidade) e conexão com a conta Mercado Pago |
 | `/admin/login` | Login administrativo |
 | `/admin/visao-geral` | KPIs, volume, receita 10 %, repasse 90 %, assinaturas, atividade, extrato de split |
-| `/admin/aprovacoes` | Curadoria com análise automática da IA (aprovar/rejeitar com motivo) |
+| `/admin/aprovacoes` | Curadoria com verificação automática por palavras-chave (aprovar/rejeitar com motivo) |
+| `/admin/pedidos` | Pedidos e SAC: contato do comprador, cancelamento e devolução |
 | `/admin/vitrine-premium` | Destaques dos assinantes e concessão de Premium |
 | `/admin/administradores` | Equipe (só o Super Admin cadastra/edita/exclui) |
 
@@ -152,7 +152,40 @@ Mesmo sem webhook, a tela do pedido consulta o Mercado Pago a cada 5 segundos.
 
 ---
 
-## 3.0 Acessibilidade (público mais velho e da zona rural)
+## 3.1 Cancelamento e devolução
+
+| Quem cancela | Quando | Como |
+|---|---|---|
+| **Cliente** (não pago) | Antes de pagar | Na página do pedido: "Quero cancelar este pedido" + os 4 últimos números do WhatsApp da compra. Cancela na hora. |
+| **Cliente** (pago, ou retirado nos 7 dias) | Antes de retirar, ou até 7 dias depois | Mesmo botão, mas vira um **pedido de cancelamento** para a equipe (nada é devolvido ainda) |
+| **Produtor** | Antes de retirar | Painel → Pedidos para entregar → "Não consigo entregar" (motivo obrigatório) |
+| **Equipe (admin)** | A qualquer momento | Admin → **Pedidos e SAC** → "Aprovar e devolver" / "Recusar" (pedidos do cliente) ou "Cancelar e devolver" |
+
+**Pedido de cancelamento (pedido pago):** o produto pode já ter sido entregue ou enviado sem o
+produtor ter marcado no painel. Por isso o cliente só *pede*: o pedido fica "pendente", o produtor
+vê um aviso amarelo no painel e recebe WhatsApp, e a equipe vê o número no menu **Pedidos e SAC**
+(filtro "Pedidos de cancelamento", com o WhatsApp do cliente e do vendedor). A equipe fala com o
+produtor e então **aprova** (cancela e devolve) ou **recusa** com o motivo, que o cliente recebe no
+WhatsApp. Depois de uma recusa, o cliente só continua pelo SAC.
+
+Ao cancelar (ou aprovar o cancelamento de) um pedido pago, o sistema pede ao Mercado Pago a devolução **total**
+(`POST /v1/payments/{id}/refunds`; no split, sai da conta do produtor). Se a devolução falhar,
+o pedido **não** é cancelado. Depois: o estoque volta, o pedido fica "cancelado" e cliente e
+produtor recebem aviso no WhatsApp. Pedido não pago: o Pix pendente é invalidado.
+Se o produtor devolver pelo app do Mercado Pago, o aviso do webhook cancela o pedido sozinho.
+Código: `backend/app/services/cancelamento_service.py`.
+
+**SAC no rodapé:** preencha no `front-mercado/.env` e reinicie o `iniciar_frontend.bat`:
+```
+VITE_SUPORTE_WHATSAPP=68999999999
+VITE_SUPORTE_TELEFONE=6833334444
+VITE_SUPORTE_EMAIL=contato@exemplo.com
+```
+As políticas (versão 1.2) usam um **CNPJ fictício** e o endereço BR-317, km 18, Rio Branco – AC
+(`front-mercado/src/content/politicas.ts`, objeto `EMPRESA`). Troque pelos dados reais antes de
+publicar o site de verdade.
+
+## 3.2 Acessibilidade (público mais velho e da zona rural)
 
 - Letra maior em todo o site (texto normal de 18 px, nada abaixo de 14 px) e botão **"Aa Letra"**
   no topo para escolher Normal, Grande ou Maior (fica guardado no aparelho).
@@ -175,7 +208,7 @@ Mesmo sem webhook, a tela do pedido consulta o Mercado Pago a cada 5 segundos.
 
 ---
 
-## 3.0.1 Exclusões e políticas (LGPD)
+## 3.3 Exclusões e políticas (LGPD)
 
 - **Admin → Aprovações:** botão **Excluir** em cada publicação (também dentro de "Analisar"). Pede um
   motivo, que é enviado ao vendedor pelo WhatsApp. Fotos e avaliações são apagadas; pedidos antigos
@@ -199,7 +232,7 @@ Mesmo sem webhook, a tela do pedido consulta o Mercado Pago a cada 5 segundos.
 
 ---
 
-## 3.1 Segurança
+## 3.4 Segurança
 
 - **Sem dados de cartão e sem dados bancários** no banco. Dados bancários de versões anteriores
   são apagados automaticamente ao iniciar.
@@ -210,8 +243,10 @@ Mesmo sem webhook, a tela do pedido consulta o Mercado Pago a cada 5 segundos.
 - Link do pedido com **código aleatório** (`/pedido/Xy8…`), impossível de adivinhar; a página não
   mostra telefone nem e-mail do comprador.
 - Login do produtor por código no WhatsApp: o código **nunca vai para o navegador**
-  (no modo desenvolvimento aparece só na janela do backend), expira em 5 min, no máximo
-  3 envios a cada 10 min e 5 tentativas.
+  (no modo desenvolvimento aparece só na janela do backend), expira em 5 min e só vale no
+  navegador que pediu (campo `desafio`). Limites por IP, por número e no máximo 30 erros por
+  número em 24 h. Trocar o número do WhatsApp exige um código enviado ao **novo** número e
+  derruba as sessões abertas no número antigo.
 - Admin: sem senha padrão, mínimo de 8 caracteres, bloqueio após 5 erros (15 min), sessão de 8 h.
 - Limite de requisições em cadastro, avaliações, checkout, sugestão de texto e contatos.
 - Uploads conferidos pelo **conteúdo real** do arquivo (não pela extensão), com tamanho máximo.
@@ -220,34 +255,39 @@ Mesmo sem webhook, a tela do pedido consulta o Mercado Pago a cada 5 segundos.
 
 ---
 
-## 4. Sugestão de textos (IA)
-
-O botão **Sugerir texto** tenta, nesta ordem (`app/services/ai_service.py`):
-1. **Ollama local** — instale o modelo recomendado:
-   ```bash
-   ollama pull qwen2.5:3b
-   ```
-   (bom em português e leve para CPU; o `phi3` costuma estourar o tempo limite)
-2. **Groq** (opcional, gratuito, muito rápido): crie a chave em https://console.groq.com/keys e
-   coloque em `GROQ_API_KEY`.
-3. **Texto de reserva** montado com as palavras-chave — o cadastro nunca trava.
-
-Diagnóstico: http://127.0.0.1:8000/api/v1/ai/status
-
-A **verificação automática** da curadoria ("94 % de adequação") é uma análise por regras e
-palavras-chave feita no próprio backend (sem serviço externo). A decisão final é sempre do admin.
-
----
-
-## 5. WhatsApp (login por código)
+## 4. WhatsApp (login por código)
 
 Configure `EVOLUTION_BASE_URL`, `EVOLUTION_TOKEN` e `EVOLUTION_INSTANCE` no `.env`.
 Com `OTP_DEV_MODE=true`, se o WhatsApp estiver fora do ar o código aparece **na janela do backend**
 (nunca no navegador). Em produção use `OTP_DEV_MODE=false`.
 
+Rotas de reserva (todas automáticas, configure no `.env`):
+
+1. **Evolution API** (principal).
+2. **API oficial da Meta** (`META_WA_*`): usada quando a Evolution não responde. Para o código de
+   login, cadastre um modelo da categoria *Autenticação* e informe em `META_WA_TEMPLATE_CODIGO`.
+3. **E-mail** (`SMTP_*`): na tela de login aparece "Receber no meu e-mail cadastrado".
+4. **Fila de reenvio**: avisos de pedido que não saíram ficam na tabela `mensagens_pendentes` e
+   são reenviados com espera crescente por até 24 h.
+
 ---
 
-## 6. Estrutura de pastas (padrão para novos módulos)
+## 4.1 Se o Mercado Pago cair
+
+- Cada chamada tem tempo limite e nova tentativa com a mesma chave de idempotência (não cobra duas vezes).
+- Depois de 3 falhas seguidas o Mercado Pago é **pausado** por 60 s: as páginas não travam esperando.
+- Com `PIX_RESERVA_CHAVE` configurada, o cliente vê o **Pix de reserva** (Pix Copia e Cola da conta do
+  Mercado Nativo com valor e identificação `MN<nº>`). A equipe confere no extrato e clica
+  **Confirmar Pix recebido** em Pedidos. O repasse ao produtor desse pedido é manual.
+- Avisos (webhooks) que falharam vão para a fila `notificacoes_pagamento` e são reprocessados.
+- A cada 2 min as tarefas automáticas conferem Pix pendentes, recuperam cobranças cuja resposta se
+  perdeu (busca pela referência do pedido) e acompanham devoluções em andamento.
+- Se um pagamento for aprovado depois de o pedido ter sido cancelado, o valor é devolvido sozinho.
+- O painel Pedidos mostra a situação dos serviços (`GET /api/v1/admin/status-servicos`).
+
+---
+
+## 5. Estrutura de pastas (padrão para novos módulos)
 
 ```
 mercado_nativo_app/
@@ -267,7 +307,7 @@ backend/app/
 ├── db/              → database.py e migrations.py (migração automática)
 ├── models/          → tabelas (*_model.py) — registre novos modelos em models/__init__.py
 ├── schemas/         → validação de entrada (Pydantic)
-├── services/        → regras e integrações (*_service.py: ai, payment, checkout, order, whatsapp, geo...)
+├── services/        → regras e integrações (*_service.py: curadoria, payment, checkout, order, whatsapp, geo...)
 └── seed.py          → dados de demonstração
 backend/tests/       → pytest
 
@@ -291,7 +331,7 @@ schema em `schemas/xxx.py`, rotas em `api/v1/xxx.py` (+ `include_router` no `mai
 
 ---
 
-## 7. Backups
+## 6. Backups
 
 Os zips ficam em `_backups/`:
 

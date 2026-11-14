@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api, assetUrl } from '@/services/api'
 import { session } from '@/services/auth'
 import { toast } from '@/services/toast'
-import { confirmar } from '@/services/confirm'
+import { confirmar, confirmarComMotivo } from '@/services/confirm'
 import { dataHora, iniciais, moeda, telefone } from '@/utils/format'
 import Icon from '@/components/ui/Icon.vue'
 import ImageBox from '@/components/ui/ImageBox.vue'
@@ -16,7 +16,7 @@ import FontSizeControl from '@/components/ui/FontSizeControl.vue'
 
 const router = useRouter()
 const route = useRoute()
-const produtor = ref<any>({ nome: '', nome_loja: '', cidade: '', estado: '', premium: false })
+const produtor = ref<any>({ nome: '', nome_loja: '', cidade: '', estado: '', premium: false, mercadopago: null })
 const produtos = ref<any[]>([])
 const pedidos = ref<any[]>([])
 const estatisticas = ref<any>({ visitas: 0, contatos_whatsapp: 0, taxa_conversao: 0, receita_total: 0, receita_30_dias: 0, vendas_concluidas: 0, pendentes_curadoria: 0 })
@@ -93,6 +93,31 @@ async function marcarRetirado(pedido: any) {
     toast.erro(e)
   }
 }
+
+async function cancelarPedido(pedido: any) {
+  const motivo = await confirmarComMotivo({
+    titulo: `Cancelar o pedido nº ${pedido.id}?`,
+    texto: 'O cliente recebe o dinheiro de volta e o produto volta para o seu estoque. Use quando não for possível entregar.',
+    motivo: { rotulo: 'Por que vai cancelar? (o cliente vê esta mensagem)', placeholder: 'Ex.: o produto acabou / não consigo entregar esta semana', obrigatorio: true },
+    sim: 'Sim, cancelar e devolver', nao: 'Não, manter o pedido', perigo: true,
+  })
+  if (motivo === null) return
+  try {
+    const r = await api(`/api/v1/producers/me/orders/${pedido.id}/cancelar`, { method: 'POST', auth: 'producer', body: { motivo } })
+    Object.assign(pedido, r)
+    toast.sucesso(`Pedido nº ${pedido.id} cancelado. O cliente recebe o dinheiro de volta.`)
+  } catch (e) {
+    toast.erro(e)
+  }
+}
+
+/** Situação do recebimento: conectado, pendente (pode conectar) ou só pela plataforma. */
+const situacaoMp = computed(() => {
+  const mp = produtor.value.mercadopago
+  if (!mp) return null
+  if (mp.conectado) return 'conectado'
+  return mp.split_disponivel ? 'pendente' : 'plataforma'
+})
 
 function logout() {
   session.logoutProducer()
@@ -181,13 +206,31 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
             <span class="block text-white/90">Coloque um produto novo à venda</span>
           </span>
         </RouterLink>
-        <button class="card p-5 flex items-center gap-4 text-left hover:border-nativo hover:shadow-md transition min-h-[88px]" @click="irPara('estoque')">
-          <span class="w-14 h-14 shrink-0 rounded-2xl bg-terra-light text-terra flex items-center justify-center"><Icon name="store" class="w-7 h-7" /></span>
+        <!-- Recebimentos: Mercado Pago conectado ou pendente -->
+        <RouterLink v-if="situacaoMp === 'pendente'" to="/painel/perfil#recebimentos"
+                    class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 flex items-center gap-4 hover:border-amber-400 hover:shadow-md transition min-h-[88px]"
+                    aria-label="Mercado Pago pendente. Toque para conectar no seu perfil">
+          <span class="w-14 h-14 shrink-0 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center"><Icon name="alert" class="w-7 h-7" /></span>
           <span>
-            <span class="block text-lg font-bold text-slate-900">Meus produtos</span>
-            <span class="block text-slate-600">{{ produtos.length }} cadastrado(s) · editar estoque e preço</span>
+            <span class="block text-lg font-bold text-amber-900">Mercado Pago pendente</span>
+            <span class="block text-amber-900">Toque aqui para conectar e receber direto na sua conta</span>
           </span>
-        </button>
+        </RouterLink>
+        <RouterLink v-else-if="situacaoMp === 'conectado'" to="/painel/perfil#recebimentos"
+                    class="card p-5 flex items-center gap-4 border-nativo-light hover:border-nativo hover:shadow-md transition min-h-[88px]">
+          <span class="w-14 h-14 shrink-0 rounded-2xl bg-nativo-light text-nativo flex items-center justify-center"><Icon name="check" class="w-7 h-7" /></span>
+          <span>
+            <span class="block text-lg font-bold text-slate-900">Mercado Pago conectado</span>
+            <span class="block text-slate-600">Suas vendas caem direto na sua conta</span>
+          </span>
+        </RouterLink>
+        <div v-else class="card p-5 flex items-center gap-4 min-h-[88px]">
+          <span class="w-14 h-14 shrink-0 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center"><Icon name="wallet" class="w-7 h-7" /></span>
+          <span>
+            <span class="block text-lg font-bold text-slate-900">Recebimento pela plataforma</span>
+            <span class="block text-slate-600">{{ carregando ? 'Carregando…' : 'O Mercado Nativo recebe e repassa a sua parte' }}</span>
+          </span>
+        </div>
       </nav>
 
       <section aria-labelledby="titulo-numeros">
@@ -232,12 +275,25 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
               <p class="text-lg font-semibold text-slate-900">{{ p.itens.map((i: any) => `${i.quantidade}× ${i.produto}`).join(', ') }}</p>
               <p class="text-slate-600">{{ p.cliente }} · {{ telefone(p.whatsapp) }}</p>
               <p class="text-sm text-slate-600">Pago com {{ p.metodo }} em {{ dataHora(p.paid_at) }}</p>
+              <p v-if="p.status === 'cancelado'" class="text-sm text-red-700 mt-1">
+                Cancelado {{ { cliente: 'pelo cliente', produtor: 'por você', admin: 'pela equipe', mercadopago: 'no Mercado Pago' }[p.cancelado_por as string] || '' }}
+                em {{ dataHora(p.cancelado_em) }}{{ p.motivo_cancelamento ? ` · ${p.motivo_cancelamento}` : '' }}. O valor foi devolvido ao cliente.
+              </p>
+              <p v-else-if="p.solicitacao?.status === 'pendente'" class="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 font-semibold" role="status">
+                O cliente pediu para cancelar. A equipe do Mercado Nativo vai falar com você para saber se o produto já foi entregue ou enviado.
+                Se ainda não entregou, espere a nossa confirmação antes de entregar.
+              </p>
+              <p v-else-if="p.solicitacao?.status === 'recusada'" class="text-sm text-slate-600 mt-1">
+                O pedido de cancelamento do cliente foi recusado pela equipe{{ p.solicitacao.resposta ? `: ${p.solicitacao.resposta}` : '' }}.
+              </p>
             </div>
             <div class="flex items-center gap-3">
-              <span class="text-xl font-bold text-nativo">{{ moeda(p.valor_produtor) }}</span>
-              <a :href="`https://wa.me/55${p.whatsapp}`" target="_blank" rel="noopener" class="btn-ghost px-4"><Icon name="phone" class="w-5 h-5" /> Chamar cliente</a>
+              <span :class="['text-xl font-bold', p.status === 'cancelado' ? 'text-slate-400 line-through' : 'text-nativo']">{{ moeda(p.valor_produtor) }}</span>
+              <a v-if="p.status !== 'cancelado'" :href="`https://wa.me/55${p.whatsapp}`" target="_blank" rel="noopener" class="btn-ghost px-4"><Icon name="phone" class="w-5 h-5" /> Chamar cliente</a>
               <button v-if="p.status === 'pago'" class="btn-primary px-4" @click="marcarRetirado(p)"><Icon name="check" class="w-5 h-5" /> Já retirou</button>
-              <span v-else class="badge bg-slate-100 text-slate-600">Retirado</span>
+              <button v-if="p.pode_cancelar" class="text-red-700 underline underline-offset-4 p-2" @click="cancelarPedido(p)">Não consigo entregar</button>
+              <span v-if="p.status === 'retirado'" class="badge bg-slate-100 text-slate-600">Retirado</span>
+              <span v-else-if="p.status === 'cancelado'" class="badge bg-red-50 text-red-700">Cancelado</span>
             </div>
           </div>
         </div>

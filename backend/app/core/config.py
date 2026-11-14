@@ -62,14 +62,21 @@ class Settings:
     OTP_DEV_MODE = _bool("OTP_DEV_MODE", False)
     OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "5"))
 
-    # Assistente de texto
-    OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-    OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "60"))
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    # WhatsApp de reserva (API oficial da Meta / WhatsApp Cloud API). Usado se a Evolution API falhar.
+    META_WA_TOKEN = os.getenv("META_WA_TOKEN", "")
+    META_WA_PHONE_ID = os.getenv("META_WA_PHONE_ID", "")
+    # Modelo (template) aprovado na Meta para códigos de acesso, ex.: "codigo_acesso" (categoria Autenticação)
+    META_WA_TEMPLATE_CODIGO = os.getenv("META_WA_TEMPLATE_CODIGO", "")
+    META_WA_IDIOMA = os.getenv("META_WA_IDIOMA", "pt_BR")
 
-    # Pagamentos: "simulado" ou "mercadopago"
+    # E-mail (reserva para o código de login quando o WhatsApp estiver fora do ar)
+    SMTP_HOST = os.getenv("SMTP_HOST", "")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM = os.getenv("SMTP_FROM", "")
+
+    # Pagamentos: "simulado" (só demonstração, nunca em produção) ou "mercadopago"
     PAYMENT_MODE = os.getenv("PAYMENT_MODE", "simulado").strip().lower()
     MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "")      # credencial da plataforma
     MP_PUBLIC_KEY = os.getenv("MP_PUBLIC_KEY", "")
@@ -78,8 +85,21 @@ class Settings:
     MP_REDIRECT_URI = os.getenv("MP_REDIRECT_URI", "")      # ex.: https://SEU.ngrok.app/api/v1/mercadopago/callback
     MP_WEBHOOK_SECRET = os.getenv("MP_WEBHOOK_SECRET", "")
     PLATFORM_FEE_PERCENT = float(os.getenv("PLATFORM_FEE_PERCENT", "10"))
+
+    # Tolerância a falhas do Mercado Pago
+    MP_TIMEOUT = float(os.getenv("MP_TIMEOUT", "12"))                  # segundos por tentativa
+    MP_TENTATIVAS = int(os.getenv("MP_TENTATIVAS", "2"))               # repetições em erro de rede / 5xx
+    MP_FALHAS_PARA_PAUSAR = int(os.getenv("MP_FALHAS_PARA_PAUSAR", "3"))
+    MP_PAUSA_SEGUNDOS = int(os.getenv("MP_PAUSA_SEGUNDOS", "60"))     # quanto tempo considera o MP fora do ar
+    # PIX de reserva: se o Mercado Pago cair, o cliente paga num Pix da plataforma e a equipe confere
+    PIX_RESERVA_CHAVE = os.getenv("PIX_RESERVA_CHAVE", "").strip()
+    PIX_RESERVA_NOME = os.getenv("PIX_RESERVA_NOME", "MERCADO NATIVO").strip()
+    PIX_RESERVA_CIDADE = os.getenv("PIX_RESERVA_CIDADE", "RIO BRANCO").strip()
+    # Tarefas automáticas (reconsultar pagamentos, reenviar mensagens): intervalo em segundos
+    TAREFAS_AUTOMATICAS = _bool("TAREFAS_AUTOMATICAS", True)
+    TAREFAS_INTERVALO = int(os.getenv("TAREFAS_INTERVALO", "120"))
     # Versão atual dos Termos de Uso / Política de Privacidade (mude quando o texto mudar)
-    TERMOS_VERSAO = os.getenv("TERMOS_VERSAO", "1.0")
+    TERMOS_VERSAO = os.getenv("TERMOS_VERSAO", "1.2")
     PREMIUM_PRICE = float(os.getenv("PREMIUM_PRICE", "9.90"))
     PREMIUM_DAYS = int(os.getenv("PREMIUM_DAYS", "30"))
 

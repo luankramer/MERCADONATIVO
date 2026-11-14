@@ -1,15 +1,13 @@
 <script setup lang="ts">
 /** Ajuda: passo a passo simples para comprar, pagar e vender, e perguntas comuns. */
 import Icon from '@/components/ui/Icon.vue'
+import { linkWhatsappSac } from '@/utils/suporte'
+import SiteRodape from '@/components/ui/SiteRodape.vue'
 import PublicHeader from '@/components/catalog/PublicHeader.vue'
 import BottomNav from '@/components/ui/BottomNav.vue'
 import { POLITICAS } from '@/content/politicas'
 
-// Número da equipe vem do front-mercado/.env (VITE_SUPORTE_WHATSAPP). Sem número, o botão não aparece.
-const suporte = (import.meta.env.VITE_SUPORTE_WHATSAPP as string | undefined)?.replace(/\D/g, '') || ''
-const linkSuporte = suporte
-  ? `https://wa.me/55${suporte}?text=${encodeURIComponent('Olá! Preciso de ajuda com o Mercado Nativo.')}`
-  : ''
+const linkSuporte = linkWhatsappSac('Olá! Preciso de ajuda com o Mercado Nativo.')
 
 const COMPRAR = [
   { icone: 'search', titulo: 'Escolha o produto', texto: 'Na página inicial, procure pelo nome ou toque em uma categoria, como "Frutas e verduras".' },
@@ -28,7 +26,12 @@ const PERGUNTAS = [
   { p: 'Meus dados do cartão ficam guardados?', r: 'Não. O cartão é digitado no formulário do Mercado Pago, e o Mercado Nativo não recebe nem guarda esses dados.' },
   { p: 'A letra está pequena. O que faço?', r: 'Toque no botão "Aa Letra", no alto da tela, e escolha "Grande" ou "Maior".' },
   { p: 'Perdi o link do meu pedido.', r: 'Depois do pagamento, enviamos um resumo do pedido com o link para o seu WhatsApp.' },
-  { p: 'Posso desistir da compra?', r: 'Sim. Antes de retirar, você cancela e recebe tudo de volta. Depois de retirar, você ainda tem 7 dias para desistir. Veja a Política de Compras e Cancelamentos.' },
+  { p: 'Como cancelo uma compra?', r: 'Abra o link do pedido (ele chega no seu WhatsApp), toque em "Quero cancelar este pedido", digite os 4 últimos números do seu WhatsApp e confirme. Se ainda não pagou, cancela na hora. Se já pagou, a equipe confirma com o vendedor se o produto ainda não foi entregue e te responde pelo WhatsApp. Aprovado, o dinheiro volta sozinho: Pix em poucos minutos; no cartão, conforme o prazo do banco.' },
+  { p: 'Já retirei o produto. Ainda posso desistir?', r: 'Sim, em até 7 dias depois de retirar. Peça pelo link do pedido ("Quero cancelar este pedido") ou fale com o SAC (no rodapé da página) informando o número do pedido. A equipe combina a devolução do produto e do dinheiro.' },
+  { p: 'Vendedor: o cliente pediu para cancelar. O que faço?', r: 'Aparece um aviso amarelo no pedido, no seu painel. A equipe do Mercado Nativo vai falar com você para saber se o produto já foi entregue ou enviado. Se ainda não entregou, espere a confirmação antes de entregar.' },
+  { p: 'Vendedor: e se eu não puder entregar um pedido?', r: 'No seu painel, em "Pedidos para entregar", toque em "Não consigo entregar" e escreva o motivo. O cliente recebe o dinheiro de volta e o produto volta para o seu estoque.' },
+  { p: 'Vendedor: como recebo direto no Mercado Pago?', r: 'Em "Meu perfil", toque em "Mandar link no meu WhatsApp". Abra o link no celular, entre na sua conta do Mercado Pago e toque em "Autorizar". A equipe também pode mandar esse link para você.' },
+  { p: 'Vendedor: não sei a senha do Mercado Pago.', r: 'Você não precisa dela. Na tela de entrada do Mercado Pago, escolha receber um código pelo WhatsApp ou SMS. Se trocou de número, toque em "Não consigo iniciar sessão".' },
   { p: 'Como apago os meus dados?', r: 'Vendedores: em "Meu perfil", toque em "Excluir minha conta" (ou "Baixar meus dados" para ter uma cópia). Compradores: fale com a equipe informando o número do pedido.' },
 ]
 </script>
@@ -93,6 +96,7 @@ const PERGUNTAS = [
           </details>
         </div>
       </section>
+      <SiteRodape mensagem="Olá! Vim pela página de Ajuda e preciso de ajuda com o Mercado Nativo." />
     </main>
     <BottomNav variante="publico" />
   </div>

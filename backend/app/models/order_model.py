@@ -48,6 +48,26 @@ class Order(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     paid_at = Column(DateTime, nullable=True)
+    retirado_em = Column(DateTime, nullable=True)
+
+    # --- Cancelamento e devolução do dinheiro (ver services/cancelamento_service.py) ---
+    cancelado_em = Column(DateTime, nullable=True)
+    cancelado_por = Column(String(20), nullable=True)          # cliente | produtor | admin | mercadopago
+    motivo_cancelamento = Column(String(300), nullable=True)
+    reembolso_id = Column(String(40), nullable=True)            # id da devolução no Mercado Pago
+    # approved | pending | falhou | manual | simulado | sem_cobranca
+    reembolso_status = Column(String(30), nullable=True)
+
+    # --- Pedido de cancelamento do cliente (pago): a equipe confere com o produtor antes de aprovar ---
+    solicitacao_status = Column(String(20), nullable=True, index=True)  # pendente | aprovada | recusada
+    solicitacao_em = Column(DateTime, nullable=True)
+    solicitacao_motivo = Column(String(300), nullable=True)
+    solicitacao_resposta = Column(String(300), nullable=True)           # motivo da recusa, para o cliente
+    solicitacao_respondida_em = Column(DateTime, nullable=True)
+
+    # --- Rotas de reserva quando o Mercado Pago cai ---
+    pagamento_iniciado_em = Column(DateTime, nullable=True)     # última tentativa de cobrar no Mercado Pago
+    reserva_informado_em = Column(DateTime, nullable=True)      # cliente avisou que pagou o Pix de reserva
 
     producer = relationship("Producer")
     itens = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")

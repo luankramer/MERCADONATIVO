@@ -44,6 +44,7 @@ const router = createRouter({
         { path: 'visao-geral', name: 'admin-overview', component: () => import('../components/admin/OverviewTab.vue'), meta: { titulo: 'Visão Geral do Sistema' } },
         { path: 'aprovacoes', name: 'admin-approvals', component: () => import('../components/admin/ApprovalsTab.vue'), meta: { titulo: 'Curadoria de Publicações' } },
         { path: 'vitrine-premium', name: 'admin-premium', component: () => import('../components/admin/PremiumTab.vue'), meta: { titulo: 'Gestão de Vitrine e Destaques' } },
+        { path: 'pedidos', name: 'admin-orders', component: () => import('../components/admin/OrdersTab.vue'), meta: { titulo: 'Pedidos e SAC' } },
         { path: 'vendedores', name: 'admin-producers', component: () => import('../components/admin/ProducersTab.vue'), meta: { titulo: 'Vendedores Cadastrados' } },
         { path: 'administradores', name: 'admin-admins', component: () => import('../components/admin/AdminsTab.vue'), meta: { titulo: 'Gestão de Administradores' } },
       ],
