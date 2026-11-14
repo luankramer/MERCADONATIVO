@@ -13,6 +13,7 @@ __pycache__/
 .pytest_cache/
 *.db
 backend/uploads/
+backend/exportacao_*.zip
 
 # Node / front-end
 node_modules/

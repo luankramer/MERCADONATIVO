@@ -8,6 +8,7 @@ Datas no horário de Rio Branco (AC).
 - Primeiro acesso num servidor novo: Super Admin pela variável `ADMIN_INICIAL_SENHA` e dados de demonstração com `DADOS_DEMO=true`.
 - Site servido por `servidor.mjs`, sem pacotes extras.
 - Script `gerar_variaveis_railway.bat` monta as variáveis a partir dos `.env` locais, sem mostrar os segredos.
+- `levar_dados_para_o_railway.bat`: leva o banco e as fotos deste computador para o site online (rota liberada só com `IMPORTACAO_LIBERADA=true`, para o Super Admin).
 
 ## 13/11/2026: pedido de cancelamento com aprovação da equipe
 - Pedido não pago: o cliente cancela na hora. Pedido pago: a equipe confirma com o produtor antes de devolver.

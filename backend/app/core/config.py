@@ -72,6 +72,8 @@ class Settings:
     ADMIN_INICIAL_SENHA = os.getenv("ADMIN_INICIAL_SENHA", "")
     # true = cadastra os produtores e produtos de demonstração se o banco estiver sem produtos
     DADOS_DEMO = _bool("DADOS_DEMO", False)
+    # true = libera, para o Super Admin, a importação dos dados do computador local (desligue depois)
+    IMPORTACAO_LIBERADA = _bool("IMPORTACAO_LIBERADA", False)
 
     # Segurança
     SECRET_KEY = os.getenv("SECRET_KEY", "")

@@ -48,6 +48,15 @@ gasta por volta de US$ 3 (estimativa). Detalhes na planilha de custos.
     - comprar com o cartão de teste e ver o pedido no painel;
     - entrar no `/admin/login` com o e-mail do Super Admin.
 
+## Levar os dados deste computador (em vez dos dados de demonstração)
+
+1. No Railway, no **Backend**, deixe `DADOS_DEMO=false` e `IMPORTACAO_LIBERADA=true`.
+2. Com o MySQL deste computador ligado, rode `scripts\levar_dados_para_o_railway.bat`.
+   Ele exporta o banco e as fotos, pede o e-mail e a senha do Super Admin **online** e envia tudo.
+3. O banco online é trocado pelo deste computador: produtores, produtos, pedidos, fotos e também os
+   administradores (o login de admin online passa a usar a senha deste computador).
+4. Depois, apague `IMPORTACAO_LIBERADA` no Railway.
+
 ## O que o código já faz sozinho
 
 - `DATABASE_URL=${{MySQL.MYSQL_URL}}`: o prefixo `mysql://` vira `mysql+pymysql://`.
