@@ -31,19 +31,47 @@ def _lista(name: str, default: str) -> list[str]:
     return [u.strip().rstrip("/") for u in os.getenv(name, default).split(",") if u.strip()]
 
 
+def _url_banco() -> str:
+    """DATABASE_URL (ou MYSQL_URL, que o Railway cria) no formato que o SQLAlchemy usa com o PyMySQL."""
+    url = (os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
+           or "mysql+pymysql://root:@localhost:3306/mercado_nativo").strip()
+    if url.startswith("mysql://"):
+        url = "mysql+pymysql://" + url[len("mysql://"):]
+    return url
+
+
+def _url_publica_api() -> str:
+    """Endereço HTTPS do backend. No Railway, se PUBLIC_API_URL ficar vazio, usa o domínio gerado por ele."""
+    url = os.getenv("PUBLIC_API_URL", "").strip().rstrip("/")
+    dominio = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    if not url and dominio:
+        url = f"https://{dominio}"
+    return url
+
+
 class Settings:
     APP_NAME = "Mercado Nativo API"
     # "dev" (padrão) ou "producao" — em produção a documentação /docs fica desligada
     APP_ENV = os.getenv("APP_ENV", "dev").strip().lower()
-    FRONTEND_URLS = _lista("FRONTEND_URLS", "http://localhost:5173,http://127.0.0.1:5173")
-    # Para onde o produtor volta depois de conectar o Mercado Pago
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
-    # Endereço público HTTPS do backend (ngrok/servidor). Necessário para o webhook do Mercado Pago.
-    PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "").rstrip("/")
-    UPLOAD_DIR = BASE_DIR / "uploads"
+    # Para onde o produtor volta depois de conectar o Mercado Pago (e base dos links enviados no WhatsApp)
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").strip().rstrip("/")
+    # Sites que podem chamar a API. O FRONTEND_URL entra sempre na lista.
+    FRONTEND_URLS = list(dict.fromkeys(
+        _lista("FRONTEND_URLS", "http://localhost:5173,http://127.0.0.1:5173") + [FRONTEND_URL]
+    ))
+    # Endereço público HTTPS do backend (servidor/Railway). Necessário para o webhook do Mercado Pago.
+    PUBLIC_API_URL = _url_publica_api()
+    # Pasta das fotos enviadas. No Railway, ligue um volume nela (veja DEPLOY_RAILWAY.md).
+    UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "").strip() or (BASE_DIR / "uploads"))
     MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "5"))
 
-    DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@localhost:3306/mercado_nativo")
+    DATABASE_URL = _url_banco()
+
+    # Primeira publicação num servidor novo (banco vazio)
+    # Cria o Super Admin (ADMIN_MASTER_EMAIL) com esta senha se ainda não existir nenhum administrador.
+    ADMIN_INICIAL_SENHA = os.getenv("ADMIN_INICIAL_SENHA", "")
+    # true = cadastra os produtores e produtos de demonstração se o banco estiver sem produtos
+    DADOS_DEMO = _bool("DADOS_DEMO", False)
 
     # Segurança
     SECRET_KEY = os.getenv("SECRET_KEY", "")
@@ -82,7 +110,9 @@ class Settings:
     MP_PUBLIC_KEY = os.getenv("MP_PUBLIC_KEY", "")
     MP_CLIENT_ID = os.getenv("MP_CLIENT_ID", "")            # para o split (OAuth dos produtores)
     MP_CLIENT_SECRET = os.getenv("MP_CLIENT_SECRET", "")
-    MP_REDIRECT_URI = os.getenv("MP_REDIRECT_URI", "")      # ex.: https://SEU.ngrok.app/api/v1/mercadopago/callback
+    # ex.: https://SEU-BACKEND.up.railway.app/api/v1/mercadopago/callback (vazio = monta pelo PUBLIC_API_URL)
+    MP_REDIRECT_URI = os.getenv("MP_REDIRECT_URI", "").strip() or (
+        f"{PUBLIC_API_URL}/api/v1/mercadopago/callback" if PUBLIC_API_URL else "")
     MP_WEBHOOK_SECRET = os.getenv("MP_WEBHOOK_SECRET", "")
     PLATFORM_FEE_PERCENT = float(os.getenv("PLATFORM_FEE_PERCENT", "10"))
 

@@ -17,6 +17,9 @@ os.environ["MP_TENTATIVAS"] = "0"            # sem esperas entre tentativas nos 
 os.environ["META_WA_TOKEN"] = ""
 os.environ["SMTP_HOST"] = ""
 os.environ["PIX_RESERVA_CHAVE"] = ""
+os.environ["DADOS_DEMO"] = "false"            # sem dados de demonstração nos testes
+os.environ["ADMIN_INICIAL_SENHA"] = ""
+os.environ["UPLOAD_DIR"] = ""
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402

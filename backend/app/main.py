@@ -16,7 +16,7 @@ from app.db.database import SessionLocal, engine
 from app.db.migrations import run_migrations
 from app.models.admin_model import NIVEL_SUPER, Admin
 from app.models.user_model import Producer
-from app.services import geo_service, payment_service, tarefas_service
+from app.services import geo_service, implantacao_service, payment_service, tarefas_service
 from app.services.whatsapp_service import numero_nacional
 
 log = logging.getLogger("mercado_nativo")
@@ -34,6 +34,8 @@ def preparar_banco() -> None:
         mestre = db.query(Admin).filter(func.lower(Admin.email) == settings.ADMIN_MASTER_EMAIL).first()
         if mestre and mestre.nivel != NIVEL_SUPER:
             mestre.nivel = NIVEL_SUPER
+        # Servidor novo: cria o Super Admin pela variável ADMIN_INICIAL_SENHA (se existir)
+        implantacao_service.criar_admin_inicial(db)
         if db.query(Admin).count() == 0:
             # Sem senha padrão (seria uma brecha): o administrador define a própria senha
             print("👤 Nenhum administrador cadastrado. Rode:  python -m app.reset_admin  (ou redefinir_admin.bat)")
@@ -48,6 +50,7 @@ def preparar_banco() -> None:
         db.commit()
     finally:
         db.close()
+    implantacao_service.carregar_dados_demo()
 
 
 @asynccontextmanager

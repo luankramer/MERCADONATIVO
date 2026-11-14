@@ -74,6 +74,12 @@ Acesse http://localhost:5173
 
 ---
 
+### Publicar na internet (Railway)
+
+Site, backend e banco ficam num projeto só do Railway. O passo a passo está em [DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md) e o histórico de mudanças em [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 ## 2. Telas (conforme os protótipos do TCC)
 
 | Rota | Tela |

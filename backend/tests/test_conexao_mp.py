@@ -72,6 +72,9 @@ def test_admin_envia_link_sem_ver_o_link(client, admin, produtor, split_ligado):
     assert "/mercadopago/conectar/" in split_ligado[-1][1]
 
 
-def test_sem_split_configurado_nao_envia(client, produtor):
+def test_sem_split_configurado_nao_envia(client, produtor, monkeypatch):
+    # Independe do .env de quem roda os testes
+    monkeypatch.setattr(settings, "MP_CLIENT_ID", "")
+    monkeypatch.setattr(settings, "MP_CLIENT_SECRET", "")
     r = client.post("/api/v1/producers/me/mercadopago/enviar-link", headers=produtor)
     assert r.status_code == 400
