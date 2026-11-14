@@ -19,7 +19,7 @@ SERVICO_BACKEND = "Backend"
 SERVICO_SITE = "Site"
 
 # Estas são montadas para o servidor; o valor local (localhost, ngrok) não serve lá
-TROCADAS = {"APP_ENV", "DATABASE_URL", "FRONTEND_URL", "FRONTEND_URLS", "PUBLIC_API_URL", "MP_REDIRECT_URI",
+TROCADAS = {"PORT", "APP_ENV", "DATABASE_URL", "FRONTEND_URL", "FRONTEND_URLS", "PUBLIC_API_URL", "MP_REDIRECT_URI",
             "OTP_DEV_MODE", "UPLOAD_DIR"}
 # Sobras de versões antigas (IA removida) que não vão para o servidor
 DESCARTADAS_PREFIXOS = ("GROQ_", "OLLAMA", "GEMINI")
@@ -40,6 +40,7 @@ def ler_env(caminho: Path) -> dict[str, str]:
 
 def variaveis_backend(local: dict[str, str]) -> list[str]:
     linhas = [
+        "PORT=8080",
         "APP_ENV=producao",
         f"DATABASE_URL=${{{{{SERVICO_BANCO}.MYSQL_URL}}}}",
         f"FRONTEND_URL=https://${{{{{SERVICO_SITE}.RAILWAY_PUBLIC_DOMAIN}}}}",
@@ -58,7 +59,7 @@ def variaveis_backend(local: dict[str, str]) -> list[str]:
 
 
 def variaveis_site(local: dict[str, str]) -> list[str]:
-    linhas = [f"VITE_API_URL=https://${{{{{SERVICO_BACKEND}.RAILWAY_PUBLIC_DOMAIN}}}}"]
+    linhas = ["PORT=8080", f"VITE_API_URL=https://${{{{{SERVICO_BACKEND}.RAILWAY_PUBLIC_DOMAIN}}}}"]
     for chave, valor in local.items():
         if chave.startswith("VITE_SUPORTE_") and valor:
             linhas.append(f"{chave}={valor}")
