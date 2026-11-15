@@ -21,6 +21,8 @@ const produtos = ref<any[]>([])
 const pedidos = ref<any[]>([])
 const estatisticas = ref<any>({ visitas: 0, contatos_whatsapp: 0, taxa_conversao: 0, receita_total: 0, receita_30_dias: 0, vendas_concluidas: 0, pendentes_curadoria: 0 })
 const carregando = ref(true)
+// Só mostra o painel depois da primeira carga (antes: esqueleto), para não piscar "Olá, Produtor", zeros e avisos
+const carregou = ref(false)
 const erroCarga = ref<string | null>(null)
 const calculadoraAberta = ref(false)
 const premiumAberto = ref(false)
@@ -53,6 +55,7 @@ async function carregarDadosDoBanco() {
     produtos.value = data.produtos
     estatisticas.value = data.estatisticas
     pedidos.value = await api('/api/v1/producers/me/orders', { auth: 'producer' })
+    carregou.value = true
   } catch (e) {
     erroCarga.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -147,11 +150,16 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
     <header class="bg-nativo text-white">
       <div class="max-w-6xl mx-auto px-4 py-4 sm:py-5 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <RouterLink to="/painel/perfil" class="flex items-center gap-3 min-w-0 group">
-          <span class="w-14 h-14 shrink-0 rounded-full bg-nativo-dark border-2 border-white/40 flex items-center justify-center font-bold overflow-hidden group-hover:ring-2 ring-white/60 transition">
+          <span v-if="!carregou" class="w-14 h-14 shrink-0 rounded-full bg-white/20 animate-pulse" aria-hidden="true" />
+          <span v-else class="w-14 h-14 shrink-0 rounded-full bg-nativo-dark border-2 border-white/40 flex items-center justify-center font-bold overflow-hidden group-hover:ring-2 ring-white/60 transition">
             <img v-if="produtor.foto_perfil" :src="assetUrl(produtor.foto_perfil)" class="w-full h-full object-cover" alt="" />
             <span v-else>{{ iniciais(produtor.nome) }}</span>
           </span>
-          <span class="min-w-0">
+          <span v-if="!carregou" class="min-w-0 space-y-2" aria-hidden="true">
+            <span class="block h-6 w-40 rounded-lg bg-white/20 animate-pulse" />
+            <span class="block h-4 w-56 max-w-full rounded-lg bg-white/15 animate-pulse" />
+          </span>
+          <span v-else class="min-w-0">
             <span class="block font-serif text-2xl font-semibold truncate">Olá, {{ produtor.nome || 'Produtor' }}</span>
             <span class="text-sm text-white/80 flex items-center gap-1 truncate">
               <Icon name="map-pin" class="w-3.5 h-3.5 shrink-0" /> {{ produtor.nome_loja }} • {{ produtor.cidade || '-' }}, {{ produtor.estado }}
@@ -159,7 +167,8 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
           </span>
         </RouterLink>
         <div class="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
-          <button class="text-right hidden sm:block" @click="!produtor.premium && (premiumAberto = true)">
+          <span v-if="!carregou" class="hidden sm:block h-10 w-32 rounded-lg bg-white/15 animate-pulse" aria-hidden="true" />
+          <button v-else class="text-right hidden sm:block" @click="!produtor.premium && (premiumAberto = true)">
             <span class="block text-sm text-white/80">Seu plano</span>
             <span v-if="produtor.premium" class="font-semibold text-amber-200 flex items-center gap-1"><Icon name="star" filled class="w-4 h-4" /> Premium Ativo</span>
             <span v-else class="font-semibold text-white underline underline-offset-4">Plano Gratuito · Assinar</span>
@@ -172,6 +181,21 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 mb-nav">
+      <!-- Primeira carga: esqueleto com o mesmo formato do painel -->
+      <div v-if="!carregou" class="space-y-6 sm:space-y-8" role="status" aria-live="polite">
+        <span class="sr-only">Carregando o seu painel…</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-hidden="true">
+          <div v-for="i in 3" :key="i" class="h-[88px] rounded-2xl bg-white border border-slate-200 animate-pulse" />
+        </div>
+        <div aria-hidden="true">
+          <div class="h-8 w-64 max-w-full rounded-lg bg-slate-200 animate-pulse mb-3" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div v-for="i in 4" :key="i" class="h-36 rounded-2xl bg-white border border-slate-200 animate-pulse" />
+          </div>
+        </div>
+        <div class="h-64 rounded-2xl bg-white border border-slate-200 animate-pulse" aria-hidden="true" />
+      </div>
+      <template v-else>
       <button v-if="!produtor.premium && !carregando" class="sm:hidden w-full rounded-xl bg-terra-light border border-terra-border px-4 py-3 font-semibold text-terra flex items-center gap-2 min-h-[48px]" @click="premiumAberto = true">
         <Icon name="star" class="w-5 h-5" /> Você está no plano gratuito. Conheça o Premium
       </button>
@@ -382,6 +406,7 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
           </table>
         </div>
       </section>
+      </template>
     </main>
 
     <CostCalculatorModal :aberto="calculadoraAberta" :produtos="produtos" @fechar="calculadoraAberta = false" @salvo="carregarDadosDoBanco" />
