@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 
@@ -17,7 +18,7 @@ from app.db.database import SessionLocal, engine
 from app.db.migrations import run_migrations
 from app.models.admin_model import NIVEL_SUPER, Admin
 from app.models.user_model import Producer
-from app.services import geo_service, implantacao_service, payment_service, tarefas_service
+from app.services import geo_service, imagem_service, implantacao_service, payment_service, tarefas_service
 from app.services.whatsapp_service import numero_nacional
 
 log = logging.getLogger("mercado_nativo")
@@ -69,6 +70,9 @@ async def lifespan(_: FastAPI):
     aviso = payment_service.aviso_configuracao()
     if aviso:
         print(f"⚠️  {aviso}")
+    fotos, economia = imagem_service.otimizar_pasta(settings.UPLOAD_DIR)
+    if fotos:
+        print(f"🖼️  {fotos} foto(s) grande(s) reduzida(s): {economia / 1024 / 1024:.1f} MB a menos para carregar.")
     if settings.TAREFAS_AUTOMATICAS:
         tarefas_service.iniciar()  # reconsulta pagamentos e reenvia mensagens em segundo plano
     yield
@@ -113,6 +117,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Respostas da API comprimidas (listas de produtos e painéis chegam mais rápido no celular)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.mount("/uploads", StaticFiles(directory=str(settings.UPLOAD_DIR)), name="uploads")
 

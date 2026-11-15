@@ -50,11 +50,14 @@ async function carregarDadosDoBanco() {
   erroCarga.value = null
   carregando.value = true
   try {
-    const data = await api('/api/v1/dashboard/me', { auth: 'producer' })
+    const [data, listaPedidos] = await Promise.all([
+      api<any>('/api/v1/dashboard/me', { auth: 'producer' }),
+      api<any[]>('/api/v1/producers/me/orders', { auth: 'producer' }),
+    ])
     produtor.value = data.produtor
     produtos.value = data.produtos
     estatisticas.value = data.estatisticas
-    pedidos.value = await api('/api/v1/producers/me/orders', { auth: 'producer' })
+    pedidos.value = listaPedidos
     carregou.value = true
   } catch (e) {
     erroCarga.value = e instanceof Error ? e.message : String(e)

@@ -2,6 +2,13 @@
 
 Datas no horário de Rio Branco (AC).
 
+## 15/11/2026: carregamento mais rápido e sem piscar
+- Painel, perfil e edição de produto mostram blocos de carregamento até os dados chegarem (antes piscavam vazios).
+- O painel busca os dados e os pedidos ao mesmo tempo.
+- Site e API comprimidos (gzip/brotli): menos dados para baixar no celular.
+- Fotos grandes já enviadas são reduzidas ao iniciar o backend (até 1200 px), mantendo o mesmo endereço.
+- A importação mantém os administradores do servidor.
+
 ## 14/11/2026: publicação no Railway
 - Recuperação de conta do admin ("Esqueci minha senha"): código de 6 números pelo WhatsApp e pelo e-mail cadastrados, válido por 10 minutos e com 5 tentativas; campo WhatsApp no cadastro dos administradores.
 - Configuração dos serviços Backend e Site (`railway.json`) e guia `DEPLOY_RAILWAY.md`.

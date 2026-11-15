@@ -5,10 +5,11 @@
  * Uso:  npm run build  e depois  npm start   (porta: variável PORT, padrão 4173)
  */
 import { createReadStream } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
 const PASTA = resolve(fileURLToPath(new URL('.', import.meta.url)), 'dist')
 const PORTA = Number(process.env.PORT) || 4173
@@ -33,6 +34,10 @@ const TIPOS = {
   '.mp3': 'audio/mpeg',
   '.mp4': 'video/mp4',
 }
+
+// Tipos de texto que valem a pena comprimir (JS, CSS, HTML, SVG...). Fotos já vêm comprimidas.
+const COMPRIMIVEIS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.webmanifest', '.svg', '.txt'])
+const cacheComprimido = new Map() // "caminho|br" -> Buffer (os arquivos do build não mudam)
 
 const SEGURANCA = {
   'X-Content-Type-Options': 'nosniff',
@@ -60,12 +65,34 @@ async function arquivoExiste(caminho) {
   }
 }
 
-function enviar(res, caminho, cache) {
-  res.writeHead(200, {
+async function comprimido(caminho, codificacao) {
+  const chave = `${caminho}|${codificacao}`
+  if (!cacheComprimido.has(chave)) {
+    const conteudo = await readFile(caminho)
+    cacheComprimido.set(chave, codificacao === 'br'
+      ? brotliCompressSync(conteudo, { params: { [constants.BROTLI_PARAM_QUALITY]: 9 } })
+      : gzipSync(conteudo, { level: 9 }))
+  }
+  return cacheComprimido.get(chave)
+}
+
+async function enviar(req, res, caminho, cache) {
+  const ext = extname(caminho).toLowerCase()
+  const cabecalhos = {
     ...SEGURANCA,
-    'Content-Type': TIPOS[extname(caminho).toLowerCase()] || 'application/octet-stream',
+    'Content-Type': TIPOS[ext] || 'application/octet-stream',
     'Cache-Control': cache,
-  })
+    Vary: 'Accept-Encoding',
+  }
+  const aceita = String(req.headers['accept-encoding'] || '')
+  const codificacao = !COMPRIMIVEIS.has(ext) ? null : /\bbr\b/.test(aceita) ? 'br' : /\bgzip\b/.test(aceita) ? 'gzip' : null
+  if (codificacao) {
+    const corpo = await comprimido(caminho, codificacao)
+    res.writeHead(200, { ...cabecalhos, 'Content-Encoding': codificacao, 'Content-Length': corpo.length })
+    return res.end(req.method === 'HEAD' ? undefined : corpo)
+  }
+  res.writeHead(200, cabecalhos)
+  if (req.method === 'HEAD') return res.end()
   createReadStream(caminho).pipe(res)
 }
 
@@ -82,7 +109,7 @@ const servidor = createServer(async (req, res) => {
   if (await arquivoExiste(caminho)) {
     // Arquivos com hash no nome (pasta assets) podem ficar em cache por 1 ano
     const fixo = caminho.includes(`${sep}assets${sep}`)
-    return enviar(res, caminho, fixo ? 'public, max-age=31536000, immutable' : 'no-cache')
+    return enviar(req, res, caminho, fixo ? 'public, max-age=31536000, immutable' : 'no-cache')
   }
   if (extname(caminho)) {
     // Pediu um arquivo (.png, .js...) que não existe: 404 de verdade
@@ -90,7 +117,7 @@ const servidor = createServer(async (req, res) => {
     return res.end()
   }
   // Rota do Vue (ex.: /produto/3): devolve o index.html
-  enviar(res, join(PASTA, 'index.html'), 'no-cache')
+  return enviar(req, res, join(PASTA, 'index.html'), 'no-cache')
 })
 
 servidor.listen(PORTA, '0.0.0.0', () => {

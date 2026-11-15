@@ -22,6 +22,7 @@ const novasFotos = ref<{ arquivo: File; preview: string }[]>([])
 const fotoInputRef = ref<HTMLInputElement | null>(null)
 const cameraInputRef = ref<HTMLInputElement | null>(null)
 const salvando = ref(false)
+const carregandoEdicao = ref(false) // na edição: esqueleto até o produto chegar
 
 // Galeria unificada: fotos já salvas + novas
 const galeria = computed(() => [
@@ -32,6 +33,7 @@ const principal = computed(() => galeria.value[0]?.url)
 
 onMounted(async () => {
   if (!isEdit.value) return
+  carregandoEdicao.value = true
   try {
     const data = await api(`/api/v1/products/${route.params.id}`, { auth: 'producer' })
     Object.assign(produto, {
@@ -43,6 +45,8 @@ onMounted(async () => {
   } catch (e) {
     toast.erro(e)
     router.replace('/painel')
+  } finally {
+    carregandoEdicao.value = false
   }
 })
 onBeforeUnmount(() => novasFotos.value.forEach((f) => URL.revokeObjectURL(f.preview)))
@@ -109,6 +113,12 @@ async function salvarProduto() {
       <h1 class="font-serif text-3xl font-bold text-slate-900">{{ isEdit ? 'Editar Produto' : 'Novo Produto' }}</h1>
       <p class="text-slate-600 mt-1">{{ isEdit ? 'Atualize os detalhes do que a terra e suas mãos produziram com tanto carinho.' : 'Cadastre um novo produto' }}</p>
 
+      <div v-if="carregandoEdicao" class="grid md:grid-cols-2 gap-8 mt-6" role="status" aria-live="polite">
+        <span class="sr-only">Carregando o produto…</span>
+        <div class="aspect-square rounded-2xl bg-slate-100 animate-pulse" aria-hidden="true" />
+        <div class="space-y-4" aria-hidden="true"><div v-for="i in 5" :key="i" class="h-14 rounded-xl bg-slate-100 animate-pulse" /></div>
+      </div>
+      <template v-else>
       <div v-if="status?.status === 'pendente'" class="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex gap-2">
         <Icon name="clock" class="w-5 h-5 shrink-0" /> Este produto está em análise pela curadoria e ainda não aparece na vitrine.
       </div>
@@ -193,6 +203,7 @@ async function salvarProduto() {
           <Icon :name="salvando ? 'loader' : 'check-circle'" class="w-5 h-5" />
         </button>
       </div>
+      </template>
     </div>
   </div>
 </template>

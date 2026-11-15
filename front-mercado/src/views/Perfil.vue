@@ -27,6 +27,7 @@ const previewFoto = ref('')
 const arquivoFoto = ref<File | null>(null)
 const fotoInput = ref<HTMLInputElement | null>(null)
 const salvando = ref(false)
+const carregou = ref(false) // esqueleto até o perfil chegar (sem campos vazios piscando)
 const conectando = ref(false)
 const enviandoLink = ref(false)
 
@@ -60,6 +61,7 @@ onMounted(async () => {
     router.replace({ query: {} })
   }
   try { preencher(await api('/api/v1/producers/me', { auth: 'producer' })) } catch (e) { toast.erro(e) }
+  carregou.value = true
   // Vindo do aviso "Mercado Pago pendente" do painel: rola até "Onde você recebe"
   if (route.hash === '#recebimentos') {
     await nextTick()
@@ -231,6 +233,12 @@ async function desconectarMercadoPago() {
         <p class="text-slate-600">É assim que os clientes conhecem você e a sua produção.</p>
       </div>
 
+      <div v-if="!carregou" class="space-y-5" role="status" aria-live="polite">
+        <span class="sr-only">Carregando o seu perfil…</span>
+        <div class="h-96 rounded-2xl bg-white border border-slate-200 animate-pulse" aria-hidden="true" />
+        <div class="h-48 rounded-2xl bg-white border border-slate-200 animate-pulse" aria-hidden="true" />
+      </div>
+      <template v-else>
       <form class="card p-5 sm:p-8 space-y-6" @submit.prevent="salvarPerfil">
         <div class="flex flex-col sm:flex-row gap-6">
           <div class="flex flex-col items-center gap-2">
@@ -414,6 +422,7 @@ async function desconectarMercadoPago() {
           </button>
         </div>
       </section>
+      </template>
     </div>
     <BottomNav variante="produtor" />
   </div>
