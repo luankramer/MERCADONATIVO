@@ -2,7 +2,8 @@
 Levar os dados do computador local para o servidor (ex.: Railway).
 
 - exportar(engine): gera um .zip com todas as tabelas (dados.json) e as fotos enviadas.
-- importar(engine, conteudo_zip): troca TODO o conteúdo do banco pelo do .zip e grava as fotos.
+- importar(engine, conteudo_zip): troca o conteúdo do banco pelo do .zip e grava as fotos.
+  Os administradores do servidor são mantidos (o login de admin online não muda).
 
 A importação pelo site só funciona com IMPORTACAO_LIBERADA=true e para o Super Admin
 (veja api/v1/importacao.py). Depois de usar, desligue a variável.
@@ -27,6 +28,8 @@ VERSAO_FORMATO = 1
 EXTENSOES_FOTO = ("jpg", "jpeg", "png", "webp", "gif")
 NOME_FOTO = re.compile(r"^uploads/(perfis|produtos)/[A-Za-z0-9_.-]+\.(" + "|".join(EXTENSOES_FOTO) + r")$", re.I)
 LIMITE_DESCOMPACTADO = 150 * 1024 * 1024  # proteção contra zip-bomba
+# Tabelas que a importação NÃO troca: os administradores continuam os do servidor
+PRESERVADAS = {"administradores"}
 
 
 class ImportacaoError(Exception):
@@ -130,8 +133,11 @@ def importar(engine: Engine, conteudo: bytes, pasta_fotos: Path | None = None) -
             conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
         try:
             for tabela in reversed(Base.metadata.sorted_tables):
-                conn.execute(tabela.delete())
+                if tabela.name not in PRESERVADAS:
+                    conn.execute(tabela.delete())
             for tabela in Base.metadata.sorted_tables:
+                if tabela.name in PRESERVADAS:
+                    continue
                 linhas = tabelas_zip.get(tabela.name, [])
                 colunas = {c.name: c for c in tabela.columns}
                 registros = [{k: _do_json(colunas[k], v) for k, v in linha.items() if k in colunas}

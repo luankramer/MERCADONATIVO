@@ -5,8 +5,8 @@ Uso (na pasta backend):  python -m app.levar_dados_online      (ou scripts/levar
 
 1. Exporta o banco local e as fotos para backend/exportacao_mercado_nativo.zip (não vai para o GitHub).
 2. Pede o e-mail e a senha do Super Admin do site ONLINE (a senha não aparece ao digitar).
-3. Envia o .zip. O servidor troca TODO o conteúdo do banco online pelo deste computador.
-   Depois disso, os administradores e as senhas passam a ser os deste computador.
+3. Envia o .zip. O servidor troca o conteúdo do banco online pelo deste computador
+   (produtores, produtos, pedidos e fotos). Os administradores online continuam os mesmos.
 
 O servidor só aceita com a variável IMPORTACAO_LIBERADA=true. Desligue-a depois.
 """
@@ -60,7 +60,6 @@ def main() -> None:
         sys.exit(1)
     dados = r.json()
     print(f"\n✅ Pronto! {sum(dados['tabelas'].values())} registros e {dados['fotos']} fotos no site online.")
-    print("👉 Agora o login de admin online usa o e-mail e a senha deste computador.")
     print("👉 No Railway, apague IMPORTACAO_LIBERADA (ou ponha false) no Backend.")
 
 

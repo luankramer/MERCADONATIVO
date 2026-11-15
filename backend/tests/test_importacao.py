@@ -31,9 +31,10 @@ def test_exporta_e_importa_banco_e_fotos(client, produtor, tmp_path):
     assert (destino / "produtos" / "p1_abc.jpg").read_bytes() == b"foto"
     assert resultado["fotos"] == 1
     with engine.connect() as a, destino_engine.connect() as b:
-        for tabela in (Producer.__table__, Admin.__table__):
-            assert a.scalar(select(func.count()).select_from(tabela)) == \
-                   b.scalar(select(func.count()).select_from(tabela))
+        assert a.scalar(select(func.count()).select_from(Producer.__table__)) == \
+               b.scalar(select(func.count()).select_from(Producer.__table__))
+        # Os administradores do servidor não são trocados
+        assert b.scalar(select(func.count()).select_from(Admin.__table__)) == 0
         loja = b.execute(select(Producer.__table__.c.business_name)).scalars().all()
         assert "Doce Querência" in loja
 
