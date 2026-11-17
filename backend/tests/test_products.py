@@ -120,7 +120,9 @@ def test_premium_calculadora_e_destaque(client, produtor, admin):
     assert r.json()["premium"] is True
 
     res = client.post("/api/v1/calculadora/calcular", headers=produtor, json=calc).json()
-    assert res == {"custo_total": 78.5, "custo_unitario": 7.85, "preco_sugerido": 11.78, "produto_atualizado": None}
+    # Formato antigo (só o valor de cada item) continua funcionando
+    assert (res["custo_total"], res["custo_unitario"], res["preco_sugerido"]) == (78.5, 7.85, 11.78)
+    assert res["produto_atualizado"] is None
 
     # Destaque só para Premium + aprovado
     prod = _criar(client, produtor, nome="Geleia de Manga")

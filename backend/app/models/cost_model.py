@@ -15,7 +15,10 @@ class CostCalculation(Base):
     product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     nome = Column(String(255), nullable=False)
     rendimento = Column(Integer, nullable=False)
-    itens = Column(Text, nullable=False)  # JSON: [{"descricao": str, "valor": float}]
+    # JSON: [{"descricao", "preco_compra", "qtd_compra", "unidade_compra", "qtd_usada", "unidade_usada", "custo"}]
+    itens = Column(Text, nullable=False)
+    # JSON: {"horas_trabalho", "valor_hora", "outros_gastos", "incluir_taxas"}
+    extras = Column(Text, nullable=True)
     margem = Column(Float, nullable=False)
     custo_total = Column(Float, nullable=False)
     custo_unitario = Column(Float, nullable=False)

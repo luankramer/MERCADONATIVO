@@ -36,3 +36,4 @@ Thumbs.db
 
 # Pacotes temporários de sincronização
 _sync*.tgz
+backend/_tmp_sync/

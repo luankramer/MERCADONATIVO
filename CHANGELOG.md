@@ -2,6 +2,12 @@
 
 Datas no horário de Rio Branco (AC).
 
+## 17/11/2026: calculadora de custos para alimentos e artesanato
+- Cada material é informado como foi comprado e quanto foi usado: kg/g, litro/ml, metro/cm ou unidade (pote, adesivo, novelo...).
+- Tempo de trabalho (horas × valor da hora) e outros gastos (gás, energia, transporte).
+- Opção de incluir no preço a comissão e a taxa do Mercado Pago, mostrando quanto o produtor recebe no Pix e no cartão.
+- Dá para começar a partir de um cálculo salvo. Cálculos antigos (só valor) continuam aceitos.
+
 ## 16/11/2026: taxas claras e financeiro com repasses
 - Termos e Regras para Vendedores v1.3: taxa do Mercado Pago (Pix ~0,99%, débito ~3,99%, crédito 2,95% a 4,98%), comissão de 10% e prazo do repasse.
 - Formulário do produto mostra quanto o produtor recebe no Pix e no cartão.

@@ -1,29 +1,21 @@
-"""Calculadora de Custos (ferramenta exclusiva Premium)."""
+"""Calculadora de Custos (ferramenta exclusiva Premium). As contas ficam em services/calculadora_service.py."""
 import json
-from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import get_current_producer
 from app.db.database import get_db
 from app.models.cost_model import CostCalculation
 from app.models.product_model import Product
 from app.models.user_model import Producer
 from app.schemas.cost import CostRequest
+from app.services import calculadora_service as calc
 
 router = APIRouter(prefix="/api/v1/calculadora", tags=["Calculadora de Custos"])
 
-
-def calcular(itens_valores: list[float], rendimento: int, margem: float) -> dict:
-    """custo total -> custo unitário -> preço sugerido = unitário × (1 + margem%)."""
-    def moeda(valor: Decimal) -> float:  # arredondamento comercial (11,775 -> 11,78)
-        return float(valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
-    total = sum((Decimal(str(v)) for v in itens_valores), Decimal("0"))
-    unitario = total / Decimal(rendimento)
-    preco = unitario * (Decimal("1") + Decimal(str(margem)) / Decimal("100"))
-    return {"custo_total": moeda(total), "custo_unitario": moeda(unitario), "preco_sugerido": moeda(preco)}
+_EXTRAS = ("horas_trabalho", "valor_hora", "outros_gastos", "incluir_taxas")
 
 
 def _exigir_premium(produtor: Producer) -> None:
@@ -35,7 +27,10 @@ def _exigir_premium(produtor: Producer) -> None:
 def calcular_custos(req: CostRequest, db: Session = Depends(get_db),
                     produtor: Producer = Depends(get_current_producer)):
     _exigir_premium(produtor)
-    resultado = calcular([i.valor for i in req.itens], req.rendimento, req.margem)
+    try:
+        resultado = calc.calcular(req)
+    except calc.CalculoError as e:
+        raise HTTPException(400, str(e)) from e
 
     produto_atualizado = None
     if req.product_id:
@@ -46,13 +41,24 @@ def calcular_custos(req: CostRequest, db: Session = Depends(get_db),
         produto_atualizado = {"id": produto.id, "nome": produto.nome, "preco": produto.preco}
 
     if req.salvar:
+        itens = [{**i.model_dump(exclude_none=True), "custo": c}
+                 for i, c in zip(req.itens, resultado["custo_itens"])]
         db.add(CostCalculation(
             producer_id=produtor.id, product_id=req.product_id, nome=req.nome, rendimento=req.rendimento,
-            itens=json.dumps([i.model_dump() for i in req.itens], ensure_ascii=False),
-            margem=req.margem, **resultado,
+            itens=json.dumps(itens, ensure_ascii=False),
+            extras=json.dumps({k: getattr(req, k) for k in _EXTRAS}),
+            margem=req.margem, custo_total=resultado["custo_total"],
+            custo_unitario=resultado["custo_unitario"], preco_sugerido=resultado["preco_sugerido"],
         ))
     db.commit()
     return {**resultado, "produto_atualizado": produto_atualizado}
+
+
+@router.get("/config")
+def config(_: Producer = Depends(get_current_producer)):
+    """Taxas usadas para mostrar, na tela, quanto o produtor recebe com o preço sugerido."""
+    return {"comissao": settings.PLATFORM_FEE_PERCENT, "taxa_pix": settings.TAXA_MP_PIX,
+            "taxa_cartao": settings.TAXA_MP_CREDITO}
 
 
 @router.get("/historico")
@@ -64,6 +70,7 @@ def historico(db: Session = Depends(get_db), produtor: Producer = Depends(get_cu
     )
     return [
         {"id": c.id, "nome": c.nome, "rendimento": c.rendimento, "itens": json.loads(c.itens),
+         **(json.loads(c.extras) if c.extras else {}),
          "margem": c.margem, "custo_total": c.custo_total, "custo_unitario": c.custo_unitario,
          "preco_sugerido": c.preco_sugerido, "product_id": c.product_id,
          "created_at": c.created_at.isoformat() if c.created_at else None}
