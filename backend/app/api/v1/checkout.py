@@ -76,6 +76,9 @@ def config():
         "mp_disponivel": payment_service.mp_disponivel(),
         "pix_reserva": payment_service.oferecer_pix_reserva(),
         "percentual_plataforma": settings.PLATFORM_FEE_PERCENT,
+        # Estimativa das taxas do Mercado Pago (%), para o produtor ver quanto recebe
+        "taxas_mercadopago": {"pix": settings.TAXA_MP_PIX, "credito": settings.TAXA_MP_CREDITO,
+                              "debito": settings.TAXA_MP_DEBITO},
         "preco_premium": settings.PREMIUM_PRICE,
         "split_disponivel": payment_service.split_disponivel(),
     }

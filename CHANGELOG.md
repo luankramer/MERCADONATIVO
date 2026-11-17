@@ -2,6 +2,13 @@
 
 Datas no horário de Rio Branco (AC).
 
+## 16/11/2026: taxas claras e financeiro com repasses
+- Termos e Regras para Vendedores v1.3: taxa do Mercado Pago (Pix ~0,99%, débito ~3,99%, crédito 2,95% a 4,98%), comissão de 10% e prazo do repasse.
+- Formulário do produto mostra quanto o produtor recebe no Pix e no cartão.
+- Pedidos do produtor mostram venda, taxa do Mercado Pago, comissão, valor líquido e se o repasse está pendente ou pago.
+- Taxa real do Mercado Pago guardada em cada pagamento (fee_details); sem ela, estimativa pela tabela.
+- Painel admin > Financeiro: resumo do mês, quanto entrou na conta do Mercado Nativo, repasses por produtor, registro do repasse e relatório para Excel.
+
 ## 15/11/2026: carregamento mais rápido e sem piscar
 - Painel, perfil e edição de produto mostram blocos de carregamento até os dados chegarem (antes piscavam vazios).
 - O painel busca os dados e os pedidos ao mesmo tempo.

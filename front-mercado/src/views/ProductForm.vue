@@ -8,6 +8,7 @@ import Icon from '@/components/ui/Icon.vue'
 import ImageBox from '@/components/ui/ImageBox.vue'
 import { CATEGORIAS, NOME_CATEGORIA } from '@/utils/categorias'
 import { reduzirImagem } from '@/utils/imagem'
+import { moeda } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +23,18 @@ const novasFotos = ref<{ arquivo: File; preview: string }[]>([])
 const fotoInputRef = ref<HTMLInputElement | null>(null)
 const cameraInputRef = ref<HTMLInputElement | null>(null)
 const salvando = ref(false)
+
+// "Quanto você recebe": venda - taxa do Mercado Pago - comissão do Mercado Nativo
+const taxas = ref({ comissao: 10, pix: 0.99, credito: 4.98 })
+api<{ percentual_plataforma: number; taxas_mercadopago?: { pix: number; credito: number } }>('/api/v1/checkout/config')
+  .then((c) => { taxas.value = { comissao: c.percentual_plataforma, pix: c.taxas_mercadopago?.pix ?? 0.99, credito: c.taxas_mercadopago?.credito ?? 4.98 } })
+  .catch(() => { /* mantém a estimativa padrão */ })
+const precoNumero = computed(() => Number(String(produto.preco).replace(',', '.')) || 0)
+function recebe(taxaMp: number) {
+  const v = precoNumero.value
+  const centavos = (x: number) => Math.round(x * 100) / 100
+  return centavos(v - centavos(v * taxas.value.comissao / 100) - centavos(v * taxaMp / 100))
+}
 const carregandoEdicao = ref(false) // na edição: esqueleto até o produto chegar
 
 // Galeria unificada: fotos já salvas + novas
@@ -163,12 +176,25 @@ async function salvarProduto() {
           <div class="grid grid-cols-5 gap-4">
             <div class="col-span-2">
               <label class="label">Preço (R$)</label>
-              <input v-model="produto.preco" type="number" min="0.01" step="0.01" class="input" placeholder="28,00" />
+              <input v-model="produto.preco" type="number" min="0.01" step="0.01" class="input" placeholder="28,00" aria-describedby="quanto-recebe" />
             </div>
             <div class="col-span-3">
               <label class="label">Lote / Safra (Opcional)</label>
               <input v-model="produto.lote" class="input" placeholder="Ex: Safra 2026" maxlength="100" />
             </div>
+          </div>
+          <div id="quanto-recebe" class="rounded-xl border border-nativo-light bg-nativo-soft p-4" aria-live="polite">
+            <p class="font-semibold text-slate-900 flex items-center gap-2"><Icon name="wallet" class="w-5 h-5 text-nativo" /> Quanto você recebe por unidade</p>
+            <template v-if="precoNumero > 0">
+              <p class="mt-2 text-slate-800">No Pix: <strong class="text-nativo text-lg">{{ moeda(recebe(taxas.pix)) }}</strong></p>
+              <p class="text-slate-800">No cartão: <strong class="text-nativo text-lg">{{ moeda(recebe(taxas.credito)) }}</strong></p>
+              <p class="text-xs text-slate-600 mt-2">
+                Valor estimado: {{ moeda(precoNumero) }} menos a taxa do Mercado Pago (cerca de {{ String(taxas.pix).replace('.', ',') }}% no Pix e até
+                {{ String(taxas.credito).replace('.', ',') }}% no cartão) e a comissão de {{ taxas.comissao }}% do Mercado Nativo.
+                <RouterLink to="/politicas/vendedores" target="_blank" class="underline">Entenda as taxas</RouterLink>
+              </p>
+            </template>
+            <p v-else class="text-sm text-slate-600 mt-1">Digite o preço para ver quanto sobra para você depois das taxas.</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>

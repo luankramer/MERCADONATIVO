@@ -12,19 +12,29 @@ import BottomNav from '@/components/ui/BottomNav.vue'
 
 const route = useRoute()
 const atual = computed(() => politica(String(route.params.slug || 'privacidade')) || POLITICAS[0]!)
-const valores = ref({ comissao: 10, premium: 9.9 })
+const valores = ref({ comissao: 10, premium: 9.9, pix: 0.99, credito: 4.98, debito: 3.99 })
 
 onMounted(async () => {
   try {
-    const c = await api<{ percentual_plataforma: number; preco_premium: number }>('/api/v1/checkout/config')
-    valores.value = { comissao: c.percentual_plataforma, premium: c.preco_premium }
+    const c = await api<{ percentual_plataforma: number; preco_premium: number; taxas_mercadopago?: { pix: number; credito: number; debito: number } }>('/api/v1/checkout/config')
+    valores.value = { ...valores.value, comissao: c.percentual_plataforma, premium: c.preco_premium, ...(c.taxas_mercadopago ?? {}) }
   } catch { /* mantém os valores padrão */ }
 })
 watch(() => route.params.slug, () => window.scrollTo({ top: 0 }))
 
-/** Troca {comissao}, {repasse} e {premium} e marca os [campos a preencher]. */
+const num = (v: number) => v.toFixed(2).replace('.', ',')
+const pct = (v: number) => String(v).replace('.', ',')
+
+/** Troca {comissao}, {repasse}, {premium} e as taxas e marca os [campos a preencher]. */
 function partes(texto: string): { t: string; pendente: boolean }[] {
+  const v = valores.value
   const pronto = texto
+    .replaceAll('{taxa_pix}', pct(v.pix))
+    .replaceAll('{taxa_credito}', pct(v.credito))
+    .replaceAll('{taxa_debito}', pct(v.debito))
+    .replaceAll('{taxa_pix_100}', num(v.pix))
+    .replaceAll('{comissao_100}', num(v.comissao))
+    .replaceAll('{liquido_pix_100}', num(100 - v.comissao - v.pix))
     .replaceAll('{comissao}', String(valores.value.comissao).replace('.', ','))
     .replaceAll('{repasse}', String(100 - valores.value.comissao).replace('.', ','))
     .replaceAll('{premium}', moeda(valores.value.premium))

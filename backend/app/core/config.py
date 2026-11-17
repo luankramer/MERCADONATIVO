@@ -119,6 +119,14 @@ class Settings:
         f"{PUBLIC_API_URL}/api/v1/mercadopago/callback" if PUBLIC_API_URL else "")
     MP_WEBHOOK_SECRET = os.getenv("MP_WEBHOOK_SECRET", "")
     PLATFORM_FEE_PERCENT = float(os.getenv("PLATFORM_FEE_PERCENT", "10"))
+    # Taxas do Mercado Pago (vendas online) usadas como ESTIMATIVA quando o Mercado Pago não informa a taxa real
+    # do pagamento. Tabela oficial (nov/2026): Pix 0,99%; crédito à vista 4,98% na hora (4,48% em 14 dias,
+    # 2,95% em 30 dias); débito virtual CAIXA ~3,99%. A taxa real de cada pagamento vem do Mercado Pago.
+    TAXA_MP_PIX = float(os.getenv("TAXA_MP_PIX", "0.99"))
+    TAXA_MP_CREDITO = float(os.getenv("TAXA_MP_CREDITO", "4.98"))
+    TAXA_MP_DEBITO = float(os.getenv("TAXA_MP_DEBITO", "3.99"))
+    # Fuso usado nos relatórios mensais (Rio Branco = -5)
+    FUSO_HORAS = int(os.getenv("FUSO_HORAS", "-5"))
 
     # Tolerância a falhas do Mercado Pago
     MP_TIMEOUT = float(os.getenv("MP_TIMEOUT", "12"))                  # segundos por tentativa
@@ -133,7 +141,7 @@ class Settings:
     TAREFAS_AUTOMATICAS = _bool("TAREFAS_AUTOMATICAS", True)
     TAREFAS_INTERVALO = int(os.getenv("TAREFAS_INTERVALO", "120"))
     # Versão atual dos Termos de Uso / Política de Privacidade (mude quando o texto mudar)
-    TERMOS_VERSAO = os.getenv("TERMOS_VERSAO", "1.2")
+    TERMOS_VERSAO = os.getenv("TERMOS_VERSAO", "1.3")
     PREMIUM_PRICE = float(os.getenv("PREMIUM_PRICE", "9.90"))
     PREMIUM_DAYS = int(os.getenv("PREMIUM_DAYS", "30"))
 

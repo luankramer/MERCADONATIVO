@@ -261,6 +261,18 @@ publicar o site de verdade.
 
 ---
 
+## 3.6 Taxas e repasses
+
+- O produtor recebe: **venda − taxa do Mercado Pago − comissão do Mercado Nativo (10%)**.
+- Taxa do Mercado Pago: a real vem do próprio pagamento (`fee_details`); sem ela, usa a estimativa de
+  `TAXA_MP_PIX`, `TAXA_MP_CREDITO` e `TAXA_MP_DEBITO` no `.env` (tabela oficial de nov/2026).
+- Produtor com a conta Mercado Pago conectada recebe direto (split). Sem conta conectada, o dinheiro cai na
+  conta do Mercado Nativo e é repassado até o 5º dia útil do mês seguinte.
+- **Painel admin > Financeiro**: escolha o mês, veja o que entrou, as taxas, quanto repassar a cada produtor,
+  registre o repasse depois de fazer o Pix e baixe o relatório para o Excel.
+
+---
+
 ## 3.5 Esqueci a senha do admin
 
 Na tela `/admin/login`, toque em **Esqueci minha senha**. O código de 6 números vai para o WhatsApp do

@@ -7,3 +7,4 @@ from app.models.review_model import Review  # noqa: F401
 from app.models.order_model import Order, OrderItem, PremiumSubscription  # noqa: F401
 from app.models.cost_model import CostCalculation  # noqa: F401
 from app.models.fila_model import MensagemPendente, NotificacaoPagamento  # noqa: F401
+from app.models.repasse_model import Repasse  # noqa: F401

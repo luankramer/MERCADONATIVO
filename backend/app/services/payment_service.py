@@ -60,6 +60,7 @@ class ResultadoPagamento:
     pix_qr_base64: str | None = None
     split_aplicado: bool = False
     referencia: str | None = None   # external_reference = código do pedido/assinatura
+    taxa_mp: float | None = None    # taxa real cobrada pelo Mercado Pago (fee_details), quando informada
 
 
 def modo_pagamento() -> str:
@@ -157,6 +158,19 @@ def _moeda(valor: float | Decimal) -> float:
     return float(Decimal(str(valor)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def percentual_taxa_mp(metodo: str | None) -> float:
+    """Taxa estimada do Mercado Pago (%), pela tabela configurada. Usada quando a taxa real não veio."""
+    return {"credit_card": settings.TAXA_MP_CREDITO, "debit_card": settings.TAXA_MP_DEBITO}.get(
+        metodo or "pix", settings.TAXA_MP_PIX)
+
+
+def estimar_taxa_mp(valor_total: float, metodo: str | None, gateway: str | None = "mercadopago") -> float:
+    """Taxa do Mercado Pago em R$. Pix de reserva (gateway manual) cai direto na conta, sem taxa."""
+    if gateway == "manual":
+        return 0.0
+    return _moeda(Decimal(str(valor_total)) * Decimal(str(percentual_taxa_mp(metodo))) / 100)
+
+
 def calcular_split(valor_total: float) -> tuple[float, float]:
     """Retorna (taxa_plataforma, valor_produtor)."""
     taxa = _moeda(Decimal(str(valor_total)) * Decimal(str(settings.PLATFORM_FEE_PERCENT)) / 100)
@@ -215,6 +229,8 @@ def _resultado(dados: dict, split: bool) -> ResultadoPagamento:
     if metodo == "bank_transfer":
         metodo = "pix"
     transacao = (dados.get("point_of_interaction") or {}).get("transaction_data") or {}
+    taxas = [f for f in (dados.get("fee_details") or []) if f.get("type") == "mercadopago_fee"]
+    taxa_mp = _moeda(sum(float(f.get("amount") or 0) for f in taxas)) if taxas else None
     return ResultadoPagamento(
         status=dados.get("status", "pending"),
         status_detalhe=dados.get("status_detail"),
@@ -225,6 +241,7 @@ def _resultado(dados: dict, split: bool) -> ResultadoPagamento:
         pix_qr_base64=transacao.get("qr_code_base64"),
         split_aplicado=split,
         referencia=dados.get("external_reference"),
+        taxa_mp=taxa_mp,
     )
 
 

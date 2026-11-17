@@ -5,15 +5,16 @@
  * 1. Preencha os dados entre [colchetes] em EMPRESA (aparecem destacados no site até serem preenchidos).
  * 2. Ao mudar qualquer texto, aumente VERSAO e ATUALIZADO_EM aqui E a variável TERMOS_VERSAO no
  *    backend/.env (ou core/config.py). Assim o painel pede para os vendedores aceitarem a nova versão.
- * 3. {comissao}, {repasse} e {premium} são trocados pelos valores reais configurados no backend.
+ * 3. {comissao}, {repasse}, {premium}, {taxa_pix}, {taxa_credito} e {taxa_debito} são trocados pelos valores
+ *    reais configurados no backend (comissão e estimativa das taxas do Mercado Pago).
  *
  * Os textos foram escritos com base na LGPD (Lei 13.709/2018), no Código de Defesa do Consumidor
  * (Lei 8.078/1990), no Marco Civil da Internet (Lei 12.965/2014) e no Decreto 7.962/2013 (comércio
  * eletrônico). Antes de publicar o site de verdade, peça para um(a) advogado(a) revisar.
  */
 
-export const VERSAO = '1.2'
-export const ATUALIZADO_EM = '13 de novembro de 2026'
+export const VERSAO = '1.3'
+export const ATUALIZADO_EM = '16 de novembro de 2026'
 
 export const EMPRESA = {
   nome: 'Mercado Nativo',
@@ -209,7 +210,10 @@ export const POLITICAS: Politica[] = [
         titulo: '7. Pagamentos, comissão e plano Premium',
         itens: [
           'Os pagamentos são processados pelo Mercado Pago (Pix, cartão de crédito ou débito).',
-          'Em cada venda paga no site, o Mercado Nativo fica com {comissao}% do valor, e o vendedor recebe {repasse}%. O cadastro e os anúncios são gratuitos.',
+          'Em cada venda paga no site, o Mercado Nativo fica com {comissao}% do valor da venda. O cadastro e os anúncios são gratuitos.',
+          'O Mercado Pago cobra uma taxa por venda, que é dele e não do Mercado Nativo: cerca de {taxa_pix}% no Pix, {taxa_debito}% no débito e, no cartão de crédito à vista, de 2,95% a {taxa_credito}% conforme o prazo para o dinheiro cair (quanto mais rápido, maior a taxa). O valor exato de cada venda aparece no seu painel e na sua conta Mercado Pago.',
+          'O vendedor recebe o valor da venda menos a taxa do Mercado Pago e menos a comissão do Mercado Nativo. Exemplo: numa venda de R$ 100,00 no Pix, o Mercado Pago fica com cerca de R$ {taxa_pix_100}, o Mercado Nativo com R$ {comissao_100} e o vendedor recebe cerca de R$ {liquido_pix_100}.',
+          'Com a conta Mercado Pago conectada, o dinheiro cai direto na conta do vendedor. Sem a conta conectada, o dinheiro cai na conta do Mercado Nativo, que repassa ao vendedor, já descontadas as taxas, até o 5º dia útil do mês seguinte, por Pix na chave combinada com a equipe. O vendedor pode ver no painel cada venda, as taxas e se o repasse já foi feito.',
           'O plano Premium é opcional, custa {premium} por 30 dias, não se renova sozinho e dá acesso à Calculadora de Custos e aos destaques na vitrine.',
         ],
       },
@@ -399,8 +403,11 @@ export const POLITICAS: Politica[] = [
       {
         titulo: '6. Recebimentos',
         itens: [
-          'Em cada venda paga pelo site você recebe {repasse}% do valor; o Mercado Nativo fica com {comissao}%.',
-          'Conectando a sua conta Mercado Pago em "Meu perfil", o valor cai direto na sua conta. Nunca pedimos senha de banco.',
+          'Em cada venda paga pelo site, o Mercado Nativo fica com {comissao}% do valor.',
+          'O Mercado Pago cobra uma taxa por venda, que é dele e não do Mercado Nativo: cerca de {taxa_pix}% no Pix, {taxa_debito}% no débito e, no cartão de crédito à vista, de 2,95% a {taxa_credito}% conforme o prazo para o dinheiro cair (quanto mais rápido, maior a taxa). O valor exato de cada venda aparece no seu painel e na sua conta Mercado Pago.',
+          'Você recebe: valor da venda − taxa do Mercado Pago − comissão do Mercado Nativo. Exemplo: venda de R$ 100,00 no Pix = cerca de R$ {liquido_pix_100} para você. Antes de publicar um produto, o formulário mostra quanto você recebe com o preço escolhido.',
+          'Com a conta Mercado Pago conectada (em "Meu perfil"), o valor cai direto na sua conta. Sem ela, o valor fica com o Mercado Nativo e é repassado a você até o 5º dia útil do mês seguinte, por Pix, já sem as taxas. Em cada pedido do painel aparece se o repasse está pendente ou já foi pago.',
+          'Nunca pedimos senha de banco nem da sua conta Mercado Pago.',
           'Se não puder entregar um pedido, cancele pelo painel ("Não consigo entregar"). O cliente recebe o dinheiro de volta e o produto volta para o seu estoque. Cancelamentos frequentes podem levar às medidas do item 5.',
           'Se o cliente pedir o cancelamento de um pedido pago, aparece um aviso no seu painel e a equipe do Mercado Nativo fala com você para confirmar se o produto já foi entregue ou enviado. Responda com a verdade e, enquanto isso, não entregue o produto. Se ainda não entregou, o cancelamento é aprovado e o valor volta ao cliente.',
           'Quando um pedido é cancelado e o valor devolvido, o seu repasse daquela venda também é desfeito. Na conta Mercado Pago conectada, a devolução sai da própria venda.',

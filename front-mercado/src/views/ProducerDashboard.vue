@@ -302,6 +302,20 @@ const STATUS: Record<string, { texto: string; classe: string }> = {
               <p class="text-lg font-semibold text-slate-900">{{ p.itens.map((i: any) => `${i.quantidade}× ${i.produto}`).join(', ') }}</p>
               <p class="text-slate-600">{{ p.cliente }} · {{ telefone(p.whatsapp) }}</p>
               <p class="text-sm text-slate-600">Pago com {{ p.metodo }} em {{ dataHora(p.paid_at) }}</p>
+              <details v-if="p.status !== 'cancelado'" class="mt-1 text-sm text-slate-700">
+                <summary class="cursor-pointer font-semibold text-nativo underline underline-offset-4">Ver taxas e quando recebo</summary>
+                <ul class="mt-2 space-y-0.5">
+                  <li>Venda: {{ moeda(p.valor_total) }}</li>
+                  <li>Taxa do Mercado Pago: − {{ moeda(p.taxa_mercadopago) }}{{ p.taxa_mp_real ? '' : ' (estimada)' }}</li>
+                  <li>Comissão do Mercado Nativo: − {{ moeda(p.taxa_plataforma) }}</li>
+                  <li class="font-bold text-slate-900">Você recebe: {{ moeda(p.valor_produtor) }}</li>
+                </ul>
+                <p class="mt-2 rounded-lg px-3 py-2" :class="p.recebimento === 'direto' || p.repasse_pago_em ? 'bg-nativo-soft text-nativo-dark' : 'bg-amber-50 text-amber-900'">
+                  <template v-if="p.recebimento === 'direto'">Caiu direto na sua conta Mercado Pago.</template>
+                  <template v-else-if="p.repasse_pago_em">Repasse feito em {{ dataHora(p.repasse_pago_em) }}.</template>
+                  <template v-else>Repasse pendente: o Mercado Nativo paga por Pix até o 5º dia útil do mês seguinte.</template>
+                </p>
+              </details>
               <p v-if="p.status === 'cancelado'" class="text-sm text-red-700 mt-1">
                 Cancelado {{ { cliente: 'pelo cliente', produtor: 'por você', admin: 'pela equipe', mercadopago: 'no Mercado Pago' }[p.cancelado_por as string] || '' }}
                 em {{ dataHora(p.cancelado_em) }}{{ p.motivo_cancelamento ? ` · ${p.motivo_cancelamento}` : '' }}. O valor foi devolvido ao cliente.

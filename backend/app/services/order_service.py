@@ -36,6 +36,20 @@ def registrar_resultado(alvo: Order | PremiumSubscription, r: ResultadoPagamento
     if isinstance(alvo, Order):
         alvo.parcelas = r.parcelas
         alvo.split_aplicado = r.split_aplicado
+        if r.taxa_mp is not None:
+            alvo.taxa_mercadopago = r.taxa_mp
+            alvo.taxa_mp_real = True
+
+
+def fechar_valores(order: Order) -> None:
+    """Valor que o produtor recebe = venda - taxa do Mercado Pago - comissão do Mercado Nativo.
+    Usa a taxa real do Mercado Pago quando ela veio; senão, a estimativa da tabela."""
+    from app.services.payment_service import estimar_taxa_mp
+
+    if order.taxa_mercadopago is None or not order.taxa_mp_real:
+        order.taxa_mercadopago = estimar_taxa_mp(order.valor_total, order.metodo, order.gateway)
+        order.taxa_mp_real = False
+    order.valor_produtor = round(max(0.0, order.valor_total - order.taxa_plataforma - order.taxa_mercadopago), 2)
 
 
 def confirmar_pedido(db: Session, order: Order) -> Order:
@@ -44,6 +58,7 @@ def confirmar_pedido(db: Session, order: Order) -> Order:
         return order
     order.status = PEDIDO_PAGO
     order.paid_at = datetime.utcnow()
+    fechar_valores(order)
     for item in order.itens:
         if item.product_id:
             produto = db.get(Product, item.product_id)
@@ -63,7 +78,8 @@ def confirmar_pedido(db: Session, order: Order) -> Order:
         order.producer.whatsapp if order.producer else None,
         f"🍃 *Mercado Nativo*\n\nNovo pedido pago ({metodo})!\n{itens}\n"
         f"Cliente: {cliente} ({order.consumidor_whatsapp})\n"
-        f"Seu repasse: R$ {repasse}{complemento}\n\nCombine a retirada com o cliente.",
+        f"Você recebe: R$ {repasse} (já sem a taxa do Mercado Pago e a comissão){complemento}\n\n"
+        "Combine a retirada com o cliente.",
     )
     # Resumo para o comprador: assim ele não precisa guardar o link do pedido
     total = f"{order.valor_total:.2f}".replace(".", ",")

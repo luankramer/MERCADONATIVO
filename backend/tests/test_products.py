@@ -76,13 +76,15 @@ def test_fluxo_completo(client, produtor, admin):
     dash = client.get("/api/v1/dashboard/me", headers=produtor).json()
     assert dash["estatisticas"]["visitas"] >= 1
     assert dash["estatisticas"]["vendas_concluidas"] == antes["vendas_concluidas"] + 1
-    assert round(dash["estatisticas"]["receita_total"] - antes["receita_total"], 2) == 50.4
+    # O produtor recebe a venda menos a comissão (10%) e a taxa do Mercado Pago (débito: 3,99%)
+    liquido = round(56.0 - 5.6 - round(56.0 * 3.99 / 100, 2), 2)
+    assert round(dash["estatisticas"]["receita_total"] - antes["receita_total"], 2) == liquido
 
     # Admin: extrato de split
     ov = client.get("/api/v1/admin/overview", headers=admin).json()
     assert round(ov["financeiro"]["volume_transacionado"] - ov_antes["volume_transacionado"], 2) == 56.0
     assert round(ov["financeiro"]["receita_plataforma"] - ov_antes["receita_plataforma"], 2) == 5.6
-    assert ov["extrato_split"][0]["repasse_produtor"] == 50.4
+    assert ov["extrato_split"][0]["repasse_produtor"] == liquido
 
     # Editar preço/estoque não volta para curadoria; mudar a história volta
     base = {"nome": "Geleia de Cupuaçu", "preco": "30", "categoria": "Alimentos", "estoque": "8",

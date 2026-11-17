@@ -33,6 +33,7 @@ const itens = [
   { to: '/admin/aprovacoes', icone: 'image', texto: 'Aprovações', contador: 'aprovacoes' },
   { to: '/admin/vitrine-premium', icone: 'star', texto: 'Vitrine Premium' },
   { to: '/admin/pedidos', icone: 'package', texto: 'Pedidos e SAC', contador: 'cancelamentos' },
+  { to: '/admin/financeiro', icone: 'wallet', texto: 'Financeiro' },
   { to: '/admin/vendedores', icone: 'user', texto: 'Vendedores' },
 ]
 

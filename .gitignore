@@ -33,3 +33,6 @@ Thumbs.db
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# Pacotes temporários de sincronização
+_sync*.tgz

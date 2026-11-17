@@ -17,6 +17,7 @@ from app.models.user_model import Producer
 from app.schemas.order import CancelamentoMotivo, PagamentoBrick, PagamentoSimulado
 from app.schemas.user import ConfirmarWhatsApp, TrocarWhatsApp
 from app.services import cancelamento_service, conexao_mp_service, geo_service, payment_service
+from app.services import financeiro_service as financeiro
 from app.services.checkout_service import confirmar_pix_simulado, pagar_com_brick, pagar_simulado, sincronizar
 from app.services.notificacao_service import notificar
 from app.services.remocao_service import exportar_dados, remover_produtor
@@ -318,8 +319,13 @@ def _pedido_dict(o: Order) -> dict:
         "whatsapp": o.consumidor_whatsapp,
         "itens": [{"produto": i.nome_produto, "quantidade": i.quantidade, "preco": i.preco_unitario} for i in o.itens],
         "valor_total": o.valor_total,
-        "valor_produtor": o.valor_produtor,
+        "valor_produtor": financeiro.liquido(o) if o.paid_at else o.valor_produtor,
         "taxa_plataforma": o.taxa_plataforma,
+        "taxa_mercadopago": financeiro.taxa_mp(o),
+        "taxa_mp_real": bool(o.taxa_mp_real),
+        # direto = caiu na conta Mercado Pago do produtor; plataforma = repasse no fim do mês
+        "recebimento": financeiro.caminho(o),
+        "repasse_pago_em": (o.repasse.pago_em.isoformat() if o.repasse_id and o.repasse else None),
         "status": o.status,
         "metodo": METODOS.get(o.metodo or "", "PIX"),
         "created_at": o.created_at.isoformat() if o.created_at else None,

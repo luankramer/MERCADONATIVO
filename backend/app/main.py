@@ -10,8 +10,8 @@ from sqlalchemy import func
 
 import app.models  # noqa: F401  (registra todas as tabelas)
 from app.api.v1 import (
-    admin, adm_auth, auth, calculadora, checkout, dashboard, importacao, mercadopago, producers, products,
-    public,
+    admin, adm_auth, auth, calculadora, checkout, dashboard, financeiro, importacao, mercadopago, producers,
+    products, public,
 )
 from app.core.config import settings
 from app.db.database import SessionLocal, engine
@@ -134,6 +134,7 @@ app.include_router(calculadora.router)
 app.include_router(admin.router)
 app.include_router(mercadopago.router)
 app.include_router(importacao.router)
+app.include_router(financeiro.router)
 
 
 @app.get("/", tags=["Status"])

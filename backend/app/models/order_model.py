@@ -34,7 +34,12 @@ class Order(Base):
 
     valor_total = Column(Float, nullable=False)
     taxa_plataforma = Column(Float, nullable=False)  # comissão da plataforma
-    valor_produtor = Column(Float, nullable=False)   # repasse líquido ao produtor
+    valor_produtor = Column(Float, nullable=False)   # repasse líquido ao produtor (já sem as taxas)
+    # Taxa do Mercado Pago deste pagamento (real, quando o Mercado Pago informa; senão, estimada pela tabela)
+    taxa_mercadopago = Column(Float, nullable=True)
+    taxa_mp_real = Column(Boolean, default=False)
+    # Repasse mensal em que o valor foi pago ao produtor (vendas que caíram na conta da plataforma)
+    repasse_id = Column(Integer, ForeignKey("repasses.id", ondelete="SET NULL"), nullable=True, index=True)
 
     status = Column(String(30), default=PEDIDO_AGUARDANDO, index=True)
     status_detalhe = Column(String(80), nullable=True)
@@ -71,6 +76,7 @@ class Order(Base):
 
     producer = relationship("Producer")
     itens = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    repasse = relationship("Repasse")
 
 
 class OrderItem(Base):
