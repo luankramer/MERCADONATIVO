@@ -1,5 +1,6 @@
 """Regras executadas quando um pagamento muda de status."""
 import logging
+import threading
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -22,6 +23,23 @@ def _notificar(numero: str | None, texto: str) -> None:
         notificacao_service.notificar(numero, texto)
     except Exception as e:
         log.warning("Aviso por WhatsApp não enviado: %s", type(e).__name__)
+
+
+def _enviar_email(para: str | None, assunto: str, texto: str) -> None:
+    """E-mail de aviso em segundo plano: não atrasa a resposta do pagamento e nunca derruba o pedido."""
+    from app.services import email_service
+
+    if not para or not email_service.email_configurado():
+        return
+
+    def _tarefa() -> None:
+        try:
+            if not email_service.enviar_email(para, assunto, texto):
+                log.warning("E-mail '%s' não foi enviado.", assunto)
+        except Exception as e:
+            log.warning("Erro ao enviar e-mail: %s", type(e).__name__)
+
+    threading.Thread(target=_tarefa, daemon=True).start()
 
 
 def registrar_resultado(alvo: Order | PremiumSubscription, r: ResultadoPagamento) -> None:
@@ -91,6 +109,25 @@ def confirmar_pedido(db: Session, order: Order) -> Order:
         f"Pedido nº {order.id}: {itens}\nValor: R$ {total} ({metodo})\n"
         f"Retirada com: {local}\n\n"
         f"Ver o pedido e falar com o produtor: {settings.FRONTEND_URL}/pedido/{order.codigo}",
+    )
+    link = f"{settings.FRONTEND_URL}/pedido/{order.codigo}"
+    contato = f"WhatsApp do produtor: {produtor.whatsapp}\n" if produtor and produtor.whatsapp else ""
+    _enviar_email(
+        order.consumidor_email,
+        f"Pedido nº {order.id} confirmado — Mercado Nativo",
+        f"Olá, {cliente.split(' ')[0]}!\n\nRecebemos o seu pagamento. Obrigado por comprar de quem produz aqui.\n\n"
+        f"Pedido nº {order.id}\nProdutos: {itens}\nValor pago: R$ {total} ({metodo})\n"
+        f"Retirada com: {local}\n{contato}\n"
+        f"Ver o pedido e falar com o produtor:\n{link}\n\n"
+        "Guarde este e-mail: ele é o comprovante da sua compra no Mercado Nativo.",
+    )
+    _enviar_email(
+        produtor.email if produtor else None,
+        f"Novo pedido pago nº {order.id} — Mercado Nativo",
+        f"Você tem um novo pedido pago ({metodo}).\n\nProdutos: {itens}\n"
+        f"Cliente: {cliente} — WhatsApp {order.consumidor_whatsapp}\n"
+        f"Valor da venda: R$ {total}\nVocê recebe: R$ {repasse} (já sem a taxa do Mercado Pago e a comissão)"
+        f"{complemento}\n\nCombine a retirada com o cliente.",
     )
     return order
 

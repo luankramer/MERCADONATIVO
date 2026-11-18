@@ -64,6 +64,8 @@ def pagar_com_brick(db: Session, alvo: Order | PremiumSubscription, dados: Pagam
         # Se a resposta do Mercado Pago se perder, as tarefas automáticas acham o pagamento pelo código
         alvo.pagamento_iniciado_em = datetime.utcnow()
         alvo.gateway = "mercadopago"
+        # E-mail digitado no pagamento: o comprador recebe a confirmação do pedido nele
+        alvo.consumidor_email = str(dados.payer.email).strip().lower()[:150]
         db.commit()
     try:
         resultado = payment_service.criar_pagamento(
