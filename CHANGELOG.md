@@ -2,6 +2,11 @@
 
 Datas no horário de Rio Branco (AC).
 
+## 17/11/2026: envio de e-mails pelo Brevo
+- E-mail do sistema (código de login e recuperação de senha do admin) pela API do Brevo, que funciona no Railway (o Railway bloqueia SMTP nos planos Trial/Hobby).
+- `scripts/testar_email.bat` manda um e-mail de teste.
+- Super Admin pode excluir outro Super Admin (nunca a si mesmo nem o principal).
+
 ## 17/11/2026: calculadora de custos para alimentos e artesanato
 - Cada material é informado como foi comprado e quanto foi usado: kg/g, litro/ml, metro/cm ou unidade (pote, adesivo, novelo...).
 - Tempo de trabalho (horas × valor da hora) e outros gastos (gás, energia, transporte).

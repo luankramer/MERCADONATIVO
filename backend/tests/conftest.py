@@ -16,6 +16,7 @@ os.environ["TAREFAS_AUTOMATICAS"] = "false"   # nos testes, as tarefas são cham
 os.environ["MP_TENTATIVAS"] = "0"            # sem esperas entre tentativas nos testes
 os.environ["META_WA_TOKEN"] = ""
 os.environ["SMTP_HOST"] = ""
+os.environ["BREVO_API_KEY"] = ""
 os.environ["PIX_RESERVA_CHAVE"] = ""
 os.environ["DADOS_DEMO"] = "false"            # sem dados de demonstração nos testes
 os.environ["ADMIN_INICIAL_SENHA"] = ""

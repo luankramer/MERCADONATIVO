@@ -261,6 +261,18 @@ publicar o site de verdade.
 
 ---
 
+## 3.7 E-mails do sistema (Brevo)
+
+1. Crie uma conta grátis em brevo.com (300 e-mails por dia).
+2. Em *Senders, Domains & Dedicated IPs* > *Senders*, adicione e confirme o e-mail remetente.
+3. Em *SMTP & API* > *API Keys*, gere uma chave.
+4. No `backend/.env`: `BREVO_API_KEY=` (a chave), `EMAIL_REMETENTE=` (o e-mail confirmado). No Railway,
+   as mesmas variáveis no serviço Backend. Teste com `scripts/testar_email.bat`.
+
+O Railway bloqueia SMTP nos planos Trial/Hobby; por isso o envio usa a API (HTTPS) do Brevo.
+
+---
+
 ## 3.6 Taxas e repasses
 
 - O produtor recebe: **venda − taxa do Mercado Pago − comissão do Mercado Nativo (10%)**.

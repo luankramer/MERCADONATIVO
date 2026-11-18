@@ -107,6 +107,10 @@ class Settings:
     SMTP_USER = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
     SMTP_FROM = os.getenv("SMTP_FROM", "")
+    # Envio por API do Brevo (HTTPS). Tem prioridade sobre o SMTP e funciona no Railway.
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
+    EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()          # e-mail verificado no Brevo
+    EMAIL_REMETENTE_NOME = os.getenv("EMAIL_REMETENTE_NOME", "Mercado Nativo").strip()
 
     # Pagamentos: "simulado" (só demonstração, nunca em produção) ou "mercadopago"
     PAYMENT_MODE = os.getenv("PAYMENT_MODE", "simulado").strip().lower()
