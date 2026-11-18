@@ -105,3 +105,19 @@ def test_whatsapp_do_admin_no_cadastro(client, admin, whatsapp_falso):
     # O número do cadastro tem prioridade sobre o ADMIN_MASTER_WHATSAPP
     _pedir(client, "mestre@teste.com")
     assert whatsapp_falso[-1][0] == "68981071483"
+
+
+def test_super_admin_exclui_outro_super_admin_mas_nao_o_principal_nem_a_si_mesmo(client, admin):
+    from app.models.admin_model import NIVEL_SUPER
+    db = SessionLocal()
+    extra = Admin(nome="Duplicado", email="mestre@teste.co", senha_hash=hash_password("senha-qualquer-1"), nivel=NIVEL_SUPER)
+    db.add(extra)
+    db.commit()
+    extra_id = extra.id
+    mestre_id = db.query(Admin).filter(Admin.email == "mestre@teste.com").first().id
+    db.close()
+    lista = {a["email"]: a for a in client.get("/api/v1/auth/admin/list", headers=admin).json()}
+    assert lista["mestre@teste.com"]["principal"] is True and lista["mestre@teste.co"]["principal"] is False
+    assert client.delete(f"/api/v1/auth/admin/{mestre_id}", headers=admin).status_code == 400
+    assert client.delete(f"/api/v1/auth/admin/{extra_id}", headers=admin).status_code == 200
+    assert "mestre@teste.co" not in {a["email"] for a in client.get("/api/v1/auth/admin/list", headers=admin).json()}

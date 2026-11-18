@@ -3,6 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.rate_limit import ip_cliente, limpar, registrar, verificar
 from app.core.security import (
     create_access_token, get_current_admin, get_super_admin, hash_password, verify_password,
@@ -34,6 +35,8 @@ def _admin_dict(admin: Admin) -> dict:
         "whatsapp": admin.whatsapp or "",
         "nivel": "Super Admin" if admin.is_super else "Administrador",
         "is_super": admin.is_super,
+        # O Super Admin principal (ADMIN_MASTER_EMAIL) nunca pode ser excluído
+        "principal": (admin.email or "").lower() == settings.ADMIN_MASTER_EMAIL,
     }
 
 
@@ -77,14 +80,16 @@ async def update_admin(admin_id: int, admin_data: AdminUpdate, db: Session = Dep
     return {"mensagem": "Administrador atualizado."}
 
 
-# 4. Rota de Exclusão (somente Super Admin; não pode excluir a si mesmo)
+# 4. Rota de Exclusão (somente Super Admin; não pode excluir a si mesmo nem o Super Admin principal)
 @router.delete("/{admin_id}")
 async def delete_admin(admin_id: int, db: Session = Depends(get_db), atual: Admin = Depends(get_super_admin)):
     admin_db = db.get(Admin, admin_id)
     if not admin_db:
         raise HTTPException(status_code=404, detail="Administrador não encontrado")
-    if admin_db.id == atual.id or admin_db.is_super:
-        raise HTTPException(status_code=400, detail="O Super Admin não pode ser excluído.")
+    if admin_db.id == atual.id:
+        raise HTTPException(status_code=400, detail="Você não pode excluir o seu próprio acesso.")
+    if (admin_db.email or "").lower() == settings.ADMIN_MASTER_EMAIL:
+        raise HTTPException(status_code=400, detail="O Super Admin principal não pode ser excluído.")
     db.delete(admin_db)
     db.commit()
     return {"mensagem": "Administrador excluído."}

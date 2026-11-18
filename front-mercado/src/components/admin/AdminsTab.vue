@@ -7,19 +7,21 @@ import { toast } from '@/services/toast'
 import { confirmar } from '@/services/confirm'
 import Icon from '@/components/ui/Icon.vue'
 
-interface AdminItem { id: number; nome: string; email: string; whatsapp: string; nivel: string; is_super: boolean }
+interface AdminItem { id: number; nome: string; email: string; whatsapp: string; nivel: string; is_super: boolean; principal?: boolean }
 
 const admins = ref<AdminItem[]>([])
 const form = reactive({ nome: '', email: '', whatsapp: '', senha: '' })
 const idEdicao = ref<number | null>(null)
 const isLoading = ref(false)
 const isMasterAdmin = ref(session.adminSuper)
+const meuId = ref<number | null>(null)
 
 async function fetchAdmins() {
   try {
     admins.value = await api<AdminItem[]>('/api/v1/auth/admin/list', { auth: 'admin' })
     const eu = await api<AdminItem>('/api/v1/auth/admin/me', { auth: 'admin' })
     isMasterAdmin.value = eu.is_super
+    meuId.value = eu.id
   } catch (e) {
     toast.erro(e)
   }
@@ -104,7 +106,7 @@ async function excluirAdmin(admin: AdminItem) {
               </td>
               <td v-if="isMasterAdmin" class="px-6 py-4 text-right whitespace-nowrap">
                 <button class="p-2 text-slate-500 hover:text-slate-900" title="Editar" @click="prepararEdicao(admin)"><Icon name="edit" class="w-5 h-5" /></button>
-                <button v-if="!admin.is_super" class="p-2 text-slate-500 hover:text-red-600" title="Excluir" @click="excluirAdmin(admin)"><Icon name="trash" class="w-5 h-5" /></button>
+                <button v-if="!admin.principal && admin.id !== meuId" class="p-2 text-slate-500 hover:text-red-600" title="Excluir" :aria-label="`Excluir o acesso de ${admin.email}`" @click="excluirAdmin(admin)"><Icon name="trash" class="w-5 h-5" /></button>
               </td>
             </tr>
           </tbody>
